@@ -142,6 +142,7 @@ import org.eclipse.rdf4j.query.algebra.evaluation.util.MathUtil;
 import org.eclipse.rdf4j.query.algebra.evaluation.util.OrderComparator;
 import org.eclipse.rdf4j.query.algebra.evaluation.util.QueryEvaluationUtil;
 import org.eclipse.rdf4j.query.algebra.evaluation.util.QueryEvaluationUtility;
+import org.eclipse.rdf4j.query.algebra.evaluation.util.QueryEvaluationUtility.Result;
 import org.eclipse.rdf4j.query.algebra.evaluation.util.ValueComparator;
 import org.eclipse.rdf4j.query.impl.EmptyBindingSet;
 import org.eclipse.rdf4j.util.UUIDable;
@@ -929,9 +930,9 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 		} else if (expr instanceof Like) {
 			return new QueryValueEvaluationStep.Minimal(this, expr);
 		} else if (expr instanceof FunctionCall) {
-			return new QueryValueEvaluationStep.Minimal(this, expr);
+			return prepare((FunctionCall) expr, context);
 		} else if (expr instanceof And) {
-			return new QueryValueEvaluationStep.Minimal(this, expr);
+			return prepare((And) expr, context);
 		} else if (expr instanceof Or) {
 			return new QueryValueEvaluationStep.Minimal(this, expr);
 		} else if (expr instanceof Not) {
@@ -1535,7 +1536,7 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 		return function.evaluate(tripleSource, argValues);
 	}
 
-	public QueryValueEvaluationStep prepare(FunctionCall node, QueryEvaluationContext context)
+	private QueryValueEvaluationStep prepare(FunctionCall node, QueryEvaluationContext context)
 			throws QueryEvaluationException {
 		Function function = FunctionRegistry.getInstance()
 				.get(node.getURI())
@@ -1631,6 +1632,65 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 		// by the evaluation of the right argument.
 		Value rightValue = evaluate(node.getRightArg(), bindings);
 		return BooleanLiteral.valueOf(QueryEvaluationUtil.getEffectiveBooleanValue(rightValue));
+	}
+
+	private QueryValueEvaluationStep prepare(And node, QueryEvaluationContext context) throws QueryEvaluationException {
+		QueryValueEvaluationStep leftStep = precompile(node.getLeftArg(), context);
+		QueryValueEvaluationStep rightStep = precompile(node.getRightArg(), context);
+		if (leftStep.isConstant()) {
+			Result constantLeftValue = QueryEvaluationUtility
+					.getEffectiveBooleanValue(leftStep.evaluate(EmptyBindingSet.getInstance()));
+			if (constantLeftValue == QueryEvaluationUtility.Result._false) {
+				return new QueryValueEvaluationStep.ConstantQueryValueEvaluationStep(BooleanLiteral.FALSE);
+			} else if (constantLeftValue == QueryEvaluationUtility.Result._true && rightStep.isConstant()) {
+				Result constantRightValue = QueryEvaluationUtility
+						.getEffectiveBooleanValue(rightStep.evaluate(EmptyBindingSet.getInstance()));
+				if (constantRightValue == QueryEvaluationUtility.Result._false) {
+					return new QueryValueEvaluationStep.ConstantQueryValueEvaluationStep(BooleanLiteral.FALSE);
+				} else if (constantRightValue == QueryEvaluationUtility.Result._true) {
+					return new QueryValueEvaluationStep.ConstantQueryValueEvaluationStep(BooleanLiteral.TRUE);
+				}
+			}
+		}
+		if (rightStep.isConstant()) {
+			Result constantRightValue = QueryEvaluationUtility
+					.getEffectiveBooleanValue(rightStep.evaluate(EmptyBindingSet.getInstance()));
+			if (constantRightValue == QueryEvaluationUtility.Result._false) {
+				return new QueryValueEvaluationStep.ConstantQueryValueEvaluationStep(BooleanLiteral.FALSE);
+			}
+		}
+		return new QueryValueEvaluationStep() {
+
+			@Override
+			public Value evaluate(BindingSet bindings)
+					throws ValueExprEvaluationException, QueryEvaluationException {
+				try {
+
+					if (QueryEvaluationUtility.getEffectiveBooleanValue(
+							leftStep.evaluate(bindings)) == QueryEvaluationUtility.Result._false) {
+						// Left argument evaluates to false, we don't need to look any
+						// further
+						return BooleanLiteral.FALSE;
+					}
+				} catch (ValueExprEvaluationException e) {
+					// Failed to evaluate the left argument. Result is 'false' when
+					// the right argument evaluates to 'false', failure otherwise.
+					Value rightValue = rightStep.evaluate(bindings);
+					if (QueryEvaluationUtility
+							.getEffectiveBooleanValue(rightValue) == QueryEvaluationUtility.Result._false) {
+						return BooleanLiteral.FALSE;
+					} else {
+						throw new ValueExprEvaluationException();
+					}
+				}
+
+				// Left argument evaluated to 'true', result is determined
+				// by the evaluation of the right argument.
+				Value rightValue = rightStep.evaluate(bindings);
+				return BooleanLiteral.valueOf(QueryEvaluationUtil.getEffectiveBooleanValue(rightValue));
+			}
+		};
+
 	}
 
 	@Deprecated(forRemoval = true)
