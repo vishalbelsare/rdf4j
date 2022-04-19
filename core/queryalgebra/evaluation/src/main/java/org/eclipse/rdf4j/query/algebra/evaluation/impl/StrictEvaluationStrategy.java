@@ -542,12 +542,7 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 			// If we have a failed compilation we always return false.
 			// Which means empty. so let's short circuit that.
 //			ves = new QueryValueEvaluationStep.ConstantQueryValueEvaluationStep(BooleanLiteral.FALSE);
-			return new QueryEvaluationStep() {
-				@Override
-				public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(BindingSet bs) {
-					return new EmptyIteration<>();
-				}
-			};
+			return QueryEvaluationStep.empty();
 		}
 		return new QueryEvaluationStep() {
 
@@ -875,13 +870,7 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 
 	protected QueryEvaluationStep prepare(EmptySet emptySet, QueryEvaluationContext context)
 			throws QueryEvaluationException {
-		return new QueryEvaluationStep() {
-
-			@Override
-			public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(BindingSet bindings) {
-				return new EmptyIteration<>();
-			}
-		};
+		return QueryEvaluationStep.empty();
 	}
 
 	@Override
