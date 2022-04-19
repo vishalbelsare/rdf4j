@@ -8,6 +8,8 @@
 
 package org.eclipse.rdf4j.query.algebra.evaluation;
 
+import java.util.function.Function;
+
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
@@ -72,6 +74,42 @@ public interface QueryValueEvaluationStep {
 		@Override
 		public Value evaluate(BindingSet bindings) throws ValueExprEvaluationException, QueryEvaluationException {
 			return strategy.evaluate(ve, bindings);
+		}
+	}
+
+	/**
+	 * A minimal implementation that falls calls a function that should return a value per passed in bindingsets.
+	 */
+	public static final class ApplyFunctionForEachBinding implements QueryValueEvaluationStep {
+
+		private final Function<BindingSet, Value> function;
+
+		public ApplyFunctionForEachBinding(Function<BindingSet, Value> function) {
+			super();
+			this.function = function;
+		}
+
+		@Override
+		public Value evaluate(BindingSet bindings) throws ValueExprEvaluationException, QueryEvaluationException {
+			return function.apply(bindings);
+		}
+	}
+
+	/**
+	 * A minimal implementation that falls back to calling evaluate in the strategy.
+	 */
+	public static final class Fail implements QueryValueEvaluationStep {
+
+		private final String message;
+
+		public Fail(String message) {
+			super();
+			this.message = message;
+		}
+
+		@Override
+		public Value evaluate(BindingSet bindings) throws ValueExprEvaluationException, QueryEvaluationException {
+			throw new ValueExprEvaluationException(message);
 		}
 	}
 }
