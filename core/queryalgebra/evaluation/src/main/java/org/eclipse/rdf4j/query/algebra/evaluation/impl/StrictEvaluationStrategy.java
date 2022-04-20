@@ -1600,8 +1600,14 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 
 	protected QueryValueEvaluationStep prepare(If node, QueryEvaluationContext context)
 			throws QueryEvaluationException {
-
-		QueryValueEvaluationStep condition = precompile(node.getCondition(), context);
+		QueryValueEvaluationStep condition;
+		try {
+			condition = precompile(node.getCondition(), context);
+		} catch (ValueExprEvaluationException e) {
+			// in case of type error, if-construction should result in empty
+			// binding.
+			return new QueryValueEvaluationStep.ApplyFunctionForEachBinding(bs -> null);
+		}
 		QueryValueEvaluationStep result = precompile(node.getResult(), context);
 		QueryValueEvaluationStep alternative = precompile(node.getAlternative(), context);
 		return new QueryValueEvaluationStep() {
