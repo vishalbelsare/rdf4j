@@ -1580,16 +1580,18 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 		throw new ValueExprEvaluationException("Both arguments must be numeric literals");
 	}
 
-	private Value mathOperationApplier(MathExpr node, Value leftVal, Value rightVal) {
+	private Value mathOperationApplier(MathExpr node, Value leftVal, Value rightVal, ValueFactory vf) {
 		if (leftVal instanceof Literal && rightVal instanceof Literal) {
-			return MathUtil.compute((Literal) leftVal, (Literal) rightVal, node.getOperator());
+			return MathUtil.compute((Literal) leftVal, (Literal) rightVal, node.getOperator(), vf);
 		}
 
 		throw new ValueExprEvaluationException("Both arguments must be literals");
 	}
 
 	protected QueryValueEvaluationStep prepare(MathExpr node, QueryEvaluationContext context) {
-		return supplyBinaryValueEvaluation(node, (leftVal, rightVal) -> mathOperationApplier(node, leftVal, rightVal),
+		ValueFactory vf = tripleSource.getValueFactory();
+		return supplyBinaryValueEvaluation(node,
+				(leftVal, rightVal) -> mathOperationApplier(node, leftVal, rightVal, vf),
 				context);
 	}
 

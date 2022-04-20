@@ -48,7 +48,22 @@ public class MathUtil {
 	 * @throws ValueExprEvaluationException
 	 */
 	public static Literal compute(Literal leftLit, Literal rightLit, MathOp op) throws ValueExprEvaluationException {
-		final ValueFactory vf = SimpleValueFactory.getInstance();
+		return compute(leftLit, rightLit, op, SimpleValueFactory.getInstance());
+	}
+
+	/**
+	 * Computes the result of applying the supplied math operator on the supplied left and right operand.
+	 *
+	 * @param leftLit  a numeric datatype literal
+	 * @param rightLit a numeric datatype literal
+	 * @param op       a mathematical operator, as definied by MathExpr.MathOp.
+	 * @param vf       a value factory used to create the resulting literals.
+	 * @return a numeric datatype literal containing the result of the operation. The result will be datatype according
+	 *         to the most specific data type the two operands have in common per the SPARQL/XPath spec.
+	 * @throws ValueExprEvaluationException
+	 */
+	public static Literal compute(Literal leftLit, Literal rightLit, MathOp op, ValueFactory vf)
+			throws ValueExprEvaluationException {
 
 		IRI leftDatatype = leftLit.getDatatype();
 		IRI rightDatatype = rightLit.getDatatype();
@@ -64,22 +79,7 @@ public class MathUtil {
 		// Determine most specific datatype that the arguments have in common,
 		// choosing from xsd:integer, xsd:decimal, xsd:float and xsd:double as
 		// per the SPARQL/XPATH spec
-		IRI commonDatatype;
-
-		if (leftDatatype.equals(XSD.DOUBLE) || rightDatatype.equals(XSD.DOUBLE)) {
-			commonDatatype = XSD.DOUBLE;
-		} else if (leftDatatype.equals(XSD.FLOAT) || rightDatatype.equals(XSD.FLOAT)) {
-			commonDatatype = XSD.FLOAT;
-		} else if (leftDatatype.equals(XSD.DECIMAL) || rightDatatype.equals(XSD.DECIMAL)) {
-			commonDatatype = XSD.DECIMAL;
-		} else if (op == MathOp.DIVIDE) {
-			// Result of integer divide is decimal and requires the arguments to
-			// be handled as such, see for details:
-			// http://www.w3.org/TR/xpath-functions/#func-numeric-divide
-			commonDatatype = XSD.DECIMAL;
-		} else {
-			commonDatatype = XSD.INTEGER;
-		}
+		IRI commonDatatype = determineCommonDatatype(op, leftDatatype, rightDatatype);
 
 		// Note: Java already handles cases like divide-by-zero appropriately
 		// for floats and doubles, see:
@@ -91,81 +91,114 @@ public class MathUtil {
 				double left = leftLit.doubleValue();
 				double right = rightLit.doubleValue();
 
-				switch (op) {
-				case PLUS:
-					return vf.createLiteral(left + right);
-				case MINUS:
-					return vf.createLiteral(left - right);
-				case MULTIPLY:
-					return vf.createLiteral(left * right);
-				case DIVIDE:
-					return vf.createLiteral(left / right);
-				default:
-					throw new IllegalArgumentException("Unknown operator: " + op);
-				}
+				return computeDouble(op, vf, left, right);
 			} else if (commonDatatype.equals(XSD.FLOAT)) {
 				float left = leftLit.floatValue();
 				float right = rightLit.floatValue();
 
-				switch (op) {
-				case PLUS:
-					return vf.createLiteral(left + right);
-				case MINUS:
-					return vf.createLiteral(left - right);
-				case MULTIPLY:
-					return vf.createLiteral(left * right);
-				case DIVIDE:
-					return vf.createLiteral(left / right);
-				default:
-					throw new IllegalArgumentException("Unknown operator: " + op);
-				}
+				return computeFloat(op, vf, left, right);
 			} else if (commonDatatype.equals(XSD.DECIMAL)) {
 				BigDecimal left = leftLit.decimalValue();
 				BigDecimal right = rightLit.decimalValue();
 
-				switch (op) {
-				case PLUS:
-					return vf.createLiteral(left.add(right));
-				case MINUS:
-					return vf.createLiteral(left.subtract(right));
-				case MULTIPLY:
-					return vf.createLiteral(left.multiply(right));
-				case DIVIDE:
-					// Divide by zero handled through NumberFormatException
-					BigDecimal result = null;
-					try {
-						// try to return the exact quotient if possible.
-						result = left.divide(right, MathContext.UNLIMITED);
-					} catch (ArithmeticException e) {
-						// non-terminating decimal expansion in quotient, using
-						// scaling and rounding.
-						result = left.setScale(getDecimalExpansionScale(), RoundingMode.HALF_UP)
-								.divide(right, RoundingMode.HALF_UP);
-					}
-
-					return vf.createLiteral(result);
-				default:
-					throw new IllegalArgumentException("Unknown operator: " + op);
-				}
+				return computeDecimal(op, vf, left, right);
 			} else { // XMLSchema.INTEGER
-				BigInteger left = leftLit.integerValue();
-				BigInteger right = rightLit.integerValue();
-
-				switch (op) {
-				case PLUS:
-					return vf.createLiteral(left.add(right));
-				case MINUS:
-					return vf.createLiteral(left.subtract(right));
-				case MULTIPLY:
-					return vf.createLiteral(left.multiply(right));
-				case DIVIDE:
-					throw new RuntimeException("Integer divisions should be processed as decimal divisions");
-				default:
-					throw new IllegalArgumentException("Unknown operator: " + op);
-				}
+				return computeInteger(leftLit, rightLit, op, vf);
 			}
 		} catch (NumberFormatException | ArithmeticException e) {
 			throw new ValueExprEvaluationException(e);
+		}
+	}
+
+	private static IRI determineCommonDatatype(MathOp op, IRI leftDatatype, IRI rightDatatype) {
+		if (leftDatatype.equals(XSD.DOUBLE) || rightDatatype.equals(XSD.DOUBLE)) {
+			return XSD.DOUBLE;
+		} else if (leftDatatype.equals(XSD.FLOAT) || rightDatatype.equals(XSD.FLOAT)) {
+			return XSD.FLOAT;
+		} else if (leftDatatype.equals(XSD.DECIMAL) || rightDatatype.equals(XSD.DECIMAL)) {
+			return XSD.DECIMAL;
+		} else if (op == MathOp.DIVIDE) {
+			// Result of integer divide is decimal and requires the arguments to
+			// be handled as such, see for details:
+			// http://www.w3.org/TR/xpath-functions/#func-numeric-divide
+			return XSD.DECIMAL;
+		} else {
+			return XSD.INTEGER;
+		}
+	}
+
+	private static Literal computeInteger(Literal leftLit, Literal rightLit, MathOp op, final ValueFactory vf) {
+		BigInteger left = leftLit.integerValue();
+		BigInteger right = rightLit.integerValue();
+
+		switch (op) {
+		case PLUS:
+			return vf.createLiteral(left.add(right));
+		case MINUS:
+			return vf.createLiteral(left.subtract(right));
+		case MULTIPLY:
+			return vf.createLiteral(left.multiply(right));
+		case DIVIDE:
+			throw new RuntimeException("Integer divisions should be processed as decimal divisions");
+		default:
+			throw new IllegalArgumentException("Unknown operator: " + op);
+		}
+	}
+
+	private static Literal computeDecimal(MathOp op, final ValueFactory vf, BigDecimal left, BigDecimal right) {
+		switch (op) {
+		case PLUS:
+			return vf.createLiteral(left.add(right));
+		case MINUS:
+			return vf.createLiteral(left.subtract(right));
+		case MULTIPLY:
+			return vf.createLiteral(left.multiply(right));
+		case DIVIDE:
+			// Divide by zero handled through NumberFormatException
+			BigDecimal result = null;
+			try {
+				// try to return the exact quotient if possible.
+				result = left.divide(right, MathContext.UNLIMITED);
+			} catch (ArithmeticException e) {
+				// non-terminating decimal expansion in quotient, using
+				// scaling and rounding.
+				result = left.setScale(getDecimalExpansionScale(), RoundingMode.HALF_UP)
+						.divide(right, RoundingMode.HALF_UP);
+			}
+
+			return vf.createLiteral(result);
+		default:
+			throw new IllegalArgumentException("Unknown operator: " + op);
+		}
+	}
+
+	private static Literal computeFloat(MathOp op, final ValueFactory vf, float left, float right) {
+		switch (op) {
+		case PLUS:
+			return vf.createLiteral(left + right);
+		case MINUS:
+			return vf.createLiteral(left - right);
+		case MULTIPLY:
+			return vf.createLiteral(left * right);
+		case DIVIDE:
+			return vf.createLiteral(left / right);
+		default:
+			throw new IllegalArgumentException("Unknown operator: " + op);
+		}
+	}
+
+	private static Literal computeDouble(MathOp op, final ValueFactory vf, double left, double right) {
+		switch (op) {
+		case PLUS:
+			return vf.createLiteral(left + right);
+		case MINUS:
+			return vf.createLiteral(left - right);
+		case MULTIPLY:
+			return vf.createLiteral(left * right);
+		case DIVIDE:
+			return vf.createLiteral(left / right);
+		default:
+			throw new IllegalArgumentException("Unknown operator: " + op);
 		}
 	}
 
