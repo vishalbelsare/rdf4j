@@ -680,33 +680,34 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 
 	public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(UnaryTupleOperator expr,
 			BindingSet bindings) throws QueryEvaluationException {
+		QueryEvaluationContext.Minimal min = new QueryEvaluationContext.Minimal(dataset);
 		if (expr instanceof Projection) {
-			return evaluate((Projection) expr, bindings);
+			return prepare((Projection) expr, min).evaluate(bindings);
 		} else if (expr instanceof MultiProjection) {
-			return evaluate((MultiProjection) expr, bindings);
+			return prepare((MultiProjection) expr, min).evaluate(bindings);
 		} else if (expr instanceof Filter) {
-			return evaluate((Filter) expr, bindings);
+			return prepare((Filter) expr, min).evaluate(bindings);
 		} else if (expr instanceof Service) {
-			return evaluate((Service) expr, bindings);
+			return prepare((Service) expr, min).evaluate(bindings);
 		} else if (expr instanceof Slice) {
-			return evaluate((Slice) expr, bindings);
+			return prepare((Slice) expr, min).evaluate(bindings);
 		} else if (expr instanceof Extension) {
-			return evaluate((Extension) expr, bindings);
+			return prepare((Extension) expr, min).evaluate(bindings);
 		} else if (expr instanceof Distinct) {
-			return evaluate((Distinct) expr, bindings);
+			return prepare((Distinct) expr, min).evaluate(bindings);
 		} else if (expr instanceof Reduced) {
-			return evaluate((Reduced) expr, bindings);
+			return prepare((Reduced) expr, min).evaluate(bindings);
 		} else if (expr instanceof Group) {
-			return evaluate((Group) expr, bindings);
+			return prepare((Group) expr, min).evaluate(bindings);
 		} else if (expr instanceof Order) {
-			return evaluate((Order) expr, bindings);
+			return prepare((Order) expr, min).evaluate(bindings);
 		} else if (expr instanceof QueryRoot) {
 			// new query, reset shared return value for successive calls of
 			// NOW()
 			this.sharedValueOfNow = null;
-			return evaluate(expr.getArg(), bindings);
+			return prepare((QueryRoot) expr, min).evaluate(bindings);
 		} else if (expr instanceof DescribeOperator) {
-			return evaluate((DescribeOperator) expr, bindings);
+			return prepare((DescribeOperator) expr, min).evaluate(bindings);
 		} else if (expr == null) {
 			throw new IllegalArgumentException("expr must not be null");
 		} else {
@@ -813,16 +814,22 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 	@Deprecated(forRemoval = true)
 	public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(BinaryTupleOperator expr,
 			BindingSet bindings) throws QueryEvaluationException {
+		QueryEvaluationContext.Minimal min = new QueryEvaluationContext.Minimal(dataset);
 		if (expr instanceof Join) {
-			return evaluate((Join) expr, bindings);
+//			return evaluate((Join) expr, bindings);
+			return prepare((Join) expr, min).evaluate(bindings);
 		} else if (expr instanceof LeftJoin) {
-			return evaluate((LeftJoin) expr, bindings);
+//			return evaluate((LeftJoin) expr, bindings);
+			return prepare((LeftJoin) expr, min).evaluate(bindings);
 		} else if (expr instanceof Union) {
-			return evaluate((Union) expr, bindings);
+//			return evaluate((Union) expr, bindings);
+			return prepare((Union) expr, min).evaluate(bindings);
 		} else if (expr instanceof Intersection) {
-			return evaluate((Intersection) expr, bindings);
+//			return evaluate((Intersection) expr, bindings);
+			return prepare((Intersection) expr, min).evaluate(bindings);
 		} else if (expr instanceof Difference) {
-			return evaluate((Difference) expr, bindings);
+//			return evaluate((Difference) expr, bindings);
+			return prepare((Difference) expr, min).evaluate(bindings);
 		} else if (expr == null) {
 			throw new IllegalArgumentException("expr must not be null");
 		} else {
@@ -1646,6 +1653,10 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 			throws QueryEvaluationException {
 		QueryValueEvaluationStep left = precompile(node.getArg(), context);
 		QueryEvaluationStep subquery = precompile(node.getSubQuery(), context);
+		// Use first binding name from tuple expr to compare values
+		String firstBindingName = node.getSubQuery().getBindingNames().iterator().next();
+		java.util.function.Function<BindingSet, Value> firstBindingGetter = context.getValue(firstBindingName);
+
 		return new QueryValueEvaluationStep() {
 
 			@Override
@@ -1655,14 +1666,11 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 				// Result is false until a match has been found
 				boolean result = false;
 
-				// Use first binding name from tuple expr to compare values
-				String bindingName = node.getSubQuery().getBindingNames().iterator().next();
-
 				try (CloseableIteration<BindingSet, QueryEvaluationException> iter = subquery.evaluate(bindings)) {
 					while (!result && iter.hasNext()) {
 						BindingSet bindingSet = iter.next();
 
-						Value rightValue = bindingSet.getValue(bindingName);
+						Value rightValue = firstBindingGetter.apply(bindingSet);
 
 						result = leftValue == null && rightValue == null
 								|| leftValue != null && leftValue.equals(rightValue);
@@ -1737,6 +1745,9 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 			throws QueryEvaluationException {
 		QueryValueEvaluationStep arg = precompile(node.getArg(), context);
 		QueryEvaluationStep subquery = precompile(node.getSubQuery(), context);
+
+		String firstBindingName = node.getSubQuery().getBindingNames().iterator().next();
+		java.util.function.Function<BindingSet, Value> firstBindingGetter = context.getValue(firstBindingName);
 		return new QueryValueEvaluationStep() {
 			@Override
 			public Value evaluate(BindingSet bindings) throws ValueExprEvaluationException, QueryEvaluationException {
@@ -1744,15 +1755,13 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 
 				// Result is false until a match has been found
 				boolean result = false;
-
 				// Use first binding name from tuple expr to compare values
-				String bindingName = node.getSubQuery().getBindingNames().iterator().next();
 
 				try (CloseableIteration<BindingSet, QueryEvaluationException> iter = subquery.evaluate(bindings)) {
 					while (!result && iter.hasNext()) {
 						BindingSet bindingSet = iter.next();
 
-						Value rightValue = bindingSet.getValue(bindingName);
+						Value rightValue = firstBindingGetter.apply(bindingSet);
 
 						try {
 							result = QueryEvaluationUtil.compare(leftValue, rightValue, node.getOperator());
@@ -1776,6 +1785,10 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 			throws QueryEvaluationException {
 		QueryValueEvaluationStep arg = precompile(node.getArg(), context);
 		QueryEvaluationStep subquery = precompile(node.getSubQuery(), context);
+
+		// Use first binding name from tuple expr to compare values
+		String firstBindingName = node.getSubQuery().getBindingNames().iterator().next();
+		java.util.function.Function<BindingSet, Value> firstBindingGetter = context.getValue(firstBindingName);
 		return new QueryValueEvaluationStep() {
 			@Override
 			public Value evaluate(BindingSet bindings) throws ValueExprEvaluationException, QueryEvaluationException {
@@ -1784,14 +1797,11 @@ public class StrictEvaluationStrategy implements EvaluationStrategy, FederatedSe
 				// Result is true until a mismatch has been found
 				boolean result = true;
 
-				// Use first binding name from tuple expr to compare values
-				String bindingName = node.getSubQuery().getBindingNames().iterator().next();
-
 				try (CloseableIteration<BindingSet, QueryEvaluationException> iter = subquery.evaluate(bindings)) {
 					while (result && iter.hasNext()) {
 						BindingSet bindingSet = iter.next();
 
-						Value rightValue = bindingSet.getValue(bindingName);
+						Value rightValue = firstBindingGetter.apply(bindingSet);
 
 						try {
 							result = QueryEvaluationUtil.compare(leftValue, rightValue, node.getOperator());
