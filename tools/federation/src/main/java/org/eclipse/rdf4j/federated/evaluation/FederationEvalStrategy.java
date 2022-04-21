@@ -395,7 +395,7 @@ public abstract class FederationEvalStrategy extends StrictEvaluationStrategy {
 		}
 
 		if (expr instanceof EmptyResult) {
-			return QueryEvaluationStep.minimal(this, expr);
+			return QueryEvaluationStep.empty();
 		}
 
 		return super.precompile(expr, context);
@@ -868,17 +868,26 @@ public abstract class FederationEvalStrategy extends StrictEvaluationStrategy {
 	}
 
 	@Override
-	public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(DescribeOperator operator,
-			final BindingSet bindings) throws QueryEvaluationException {
+	protected QueryEvaluationStep prepare(DescribeOperator operator,
+			QueryEvaluationContext context) throws QueryEvaluationException {
 
 		if (!(operator instanceof FederatedDescribeOperator)) {
 			throw new FedXRuntimeException(
 					"Expected a FedXDescribeOperator Node. Found " + operator.getClass() + " instead.");
 		}
-		CloseableIteration<BindingSet, QueryEvaluationException> iter = evaluate(operator.getArg(), bindings);
-		// Note: we need to evaluate the DESCRIBE over the entire federation
-		return new FederatedDescribeIteration(iter, this, operator.getBindingNames(), bindings,
-				((FederatedDescribeOperator) operator).getQueryInfo());
+		QueryEvaluationStep arg = precompile(operator.getArg());
+		return new QueryEvaluationStep() {
+
+			@Override
+			public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(BindingSet bindings) {
+				CloseableIteration<BindingSet, QueryEvaluationException> iter = arg.evaluate(bindings);
+				// Note: we need to evaluate the DESCRIBE over the entire federation
+				return new FederatedDescribeIteration(iter, FederationEvalStrategy.this, operator.getBindingNames(),
+						bindings,
+						((FederatedDescribeOperator) operator).getQueryInfo());
+			}
+		};
+
 	}
 
 	protected CloseableIteration<BindingSet, QueryEvaluationException> evaluateAtStatementSources(Object preparedQuery,
