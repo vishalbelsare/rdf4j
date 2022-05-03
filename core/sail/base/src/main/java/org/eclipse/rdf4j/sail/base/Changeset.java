@@ -21,7 +21,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -72,14 +71,14 @@ abstract class Changeset implements SailSink, ModelFactory {
 
 	/**
 	 * Statements that have been added as part of a transaction, but has not yet been committed.
-	 *
+	 * <p>
 	 * DO NOT EXPOSE THE MODEL OUTSIDE OF THIS CLASS BECAUSE IT IS NOT THREAD-SAFE
 	 */
 	private volatile Model approved;
 
 	/**
 	 * Explicit statements that have been removed as part of a transaction, but have not yet been committed.
-	 *
+	 * <p>
 	 * DO NOT EXPOSE THE MODEL OUTSIDE OF THIS CLASS BECAUSE IT IS NOT THREAD-SAFE
 	 */
 	private volatile Model deprecated;
@@ -908,6 +907,7 @@ abstract class Changeset implements SailSink, ModelFactory {
 		private volatile boolean writeLocked;
 
 		private static final VarHandle WRITE_LOCKED;
+
 		static {
 			try {
 				MethodHandles.Lookup l = MethodHandles.lookup();
