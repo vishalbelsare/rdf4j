@@ -609,7 +609,14 @@ abstract class Changeset implements SailSink, ModelFactory {
 
 	public boolean hasDeprecated() {
 		assert !closed;
-		return deprecated != null && !deprecated.isEmpty();
+		if (deprecated == null)
+			return false;
+		boolean readLock = readWriteLock.readLock();
+		try {
+			return !deprecated.isEmpty();
+		} finally {
+			readWriteLock.unlockReader(readLock);
+		}
 	}
 
 	boolean isChanged() {
@@ -667,7 +674,14 @@ abstract class Changeset implements SailSink, ModelFactory {
 
 	boolean hasApproved() {
 		assert !closed;
-		return approved != null && !approved.isEmpty();
+		if (approved == null)
+			return false;
+		boolean readLock = readWriteLock.readLock();
+		try {
+			return !approved.isEmpty();
+		} finally {
+			readWriteLock.unlockReader(readLock);
+		}
 	}
 
 	Iterable<Statement> getApprovedStatements(Resource subj, IRI pred, Value obj,
