@@ -910,8 +910,9 @@ abstract class Changeset implements SailSink, ModelFactory {
 
 		static {
 			try {
-				MethodHandles.Lookup l = MethodHandles.lookup();
-				WRITE_LOCKED = l.findVarHandle(AdderBasedReadWriteLock.class, "writeLocked", boolean.class);
+				WRITE_LOCKED = MethodHandles.lookup()
+						.in(AdderBasedReadWriteLock.class)
+						.findVarHandle(AdderBasedReadWriteLock.class, "writeLocked", boolean.class);
 			} catch (ReflectiveOperationException e) {
 				throw new Error(e);
 			}
@@ -924,13 +925,13 @@ abstract class Changeset implements SailSink, ModelFactory {
 		public boolean readLock() {
 			while (true) {
 				readersLocked.increment();
-				if (!writeLocked) {
+				if (!((boolean) WRITE_LOCKED.getAcquire(this))) {
 					// Everything is good! We have acquired a read-lock and there are no active writers.
 					return true;
 				} else {
 					// Release our read lock so we don't block any writers.
 					readersUnlocked.increment();
-					while (writeLocked) {
+					while (((boolean) WRITE_LOCKED.getAcquire(this))) {
 						Thread.onSpinWait();
 					}
 				}
@@ -949,7 +950,10 @@ abstract class Changeset implements SailSink, ModelFactory {
 			// Acquire a write-lock.
 			boolean writeLocked;
 			do {
-				writeLocked = WRITE_LOCKED.compareAndSet(this, false, true);
+				writeLocked = WRITE_LOCKED.weakCompareAndSetAcquire(this, false, true);
+				if (!writeLocked) {
+					Thread.onSpinWait();
+				}
 			} while (!writeLocked);
 
 			// Wait for active readers to finish.
@@ -970,7 +974,7 @@ abstract class Changeset implements SailSink, ModelFactory {
 		public void unlockWriter(boolean writeLocked) {
 			if (writeLocked) {
 				VarHandle.fullFence();
-				this.writeLocked = false;
+				WRITE_LOCKED.setRelease(this, false);
 			} else {
 				throw new IllegalMonitorStateException();
 			}
