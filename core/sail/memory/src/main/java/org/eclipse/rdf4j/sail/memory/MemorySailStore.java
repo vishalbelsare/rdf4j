@@ -544,7 +544,7 @@ class MemorySailStore implements SailStore {
 					Runnable runnable = () -> {
 						try {
 							// sleep for 10 seconds because we don't need to start snapshot cleanup immediately
-							Thread.sleep(10 * 1000);
+							Thread.sleep(5 * 1000);
 							cleanSnapshots();
 						} catch (InterruptedException e) {
 							Thread.currentThread().interrupt();
