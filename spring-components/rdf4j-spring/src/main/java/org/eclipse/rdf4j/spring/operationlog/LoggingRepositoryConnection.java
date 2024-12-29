@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.spring.operationlog;
@@ -15,7 +18,7 @@ import java.io.Reader;
 import java.lang.invoke.MethodHandles;
 import java.net.URL;
 
-import org.eclipse.rdf4j.common.iteration.Iteration;
+import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
@@ -38,8 +41,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @since 4.0.0
  * @author Florian Kleedorfer
+ * @since 4.0.0
  */
 public class LoggingRepositoryConnection extends RepositoryConnectionWrapper {
 	private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -145,9 +148,9 @@ public class LoggingRepositoryConnection extends RepositoryConnectionWrapper {
 	}
 
 	@Override
-	public <E extends Exception> void add(
-			Iteration<? extends Statement, E> statementIter, Resource... contexts)
-			throws RepositoryException, E {
+	public void add(
+			CloseableIteration<? extends Statement> statementIter, Resource... contexts)
+			throws RepositoryException {
 		operationLog.runWithLog(
 				PseudoOperation.forAdd(statementIter, contexts),
 				wrapInRuntimeException(() -> getDelegate().add(statementIter, contexts)));
@@ -202,9 +205,9 @@ public class LoggingRepositoryConnection extends RepositoryConnectionWrapper {
 	}
 
 	@Override
-	public <E extends Exception> void remove(
-			Iteration<? extends Statement, E> statementIter, Resource... contexts)
-			throws RepositoryException, E {
+	public void remove(
+			CloseableIteration<? extends Statement> statementIter, Resource... contexts)
+			throws RepositoryException {
 		operationLog.runWithLog(
 				PseudoOperation.forRemove(statementIter, contexts),
 				wrapInRuntimeException(() -> getDelegate().remove(statementIter, contexts)));

@@ -1,13 +1,16 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.testsuite.repository;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.TimeUnit;
 
@@ -18,30 +21,30 @@ import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.DC;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Integration test suite for implementations of Repository.
  *
  * @author Jeen Broekstra
  */
+@Timeout(value = 1, unit = TimeUnit.MINUTES)
 public abstract class RepositoryTest {
 
-	@BeforeClass
-	public static void setUpClass() throws Exception {
+	@BeforeAll
+	public static void setUpClass() {
 		System.setProperty("org.eclipse.rdf4j.repository.debug", "true");
 	}
 
-	/**
-	 * Timeout all individual tests after 1 minute.
-	 */
-	@Rule
-	public Timeout to = new Timeout(1, TimeUnit.MINUTES);
+	@AfterAll
+	public static void afterClass() throws Exception {
+		System.setProperty("org.eclipse.rdf4j.repository.debug", "false");
+	}
 
 	private static final String MBOX = "mbox";
 
@@ -83,7 +86,7 @@ public abstract class RepositoryTest {
 
 	protected Literal Александър;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		testRepository = createRepository();
 
@@ -104,8 +107,8 @@ public abstract class RepositoryTest {
 
 	}
 
-	@After
-	public void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() {
 		testRepository.shutDown();
 	}
 
@@ -114,10 +117,10 @@ public abstract class RepositoryTest {
 	 *
 	 * @return an uninitialized repository.
 	 */
-	protected abstract Repository createRepository() throws Exception;
+	protected abstract Repository createRepository();
 
 	@Test
-	public void testShutdownFollowedByInit() throws Exception {
+	public void testShutdownFollowedByInit() {
 		testRepository.init();
 		RepositoryConnection conn = testRepository.getConnection();
 		try {
@@ -140,14 +143,11 @@ public abstract class RepositoryTest {
 	}
 
 	@Test
-	public void testAutoInit() throws Exception {
-		RepositoryConnection conn = testRepository.getConnection();
-		try {
+	public void testAutoInit() {
+		try (RepositoryConnection conn = testRepository.getConnection()) {
 			conn.add(bob, mbox, mboxBob);
 			assertTrue(conn.hasStatement(bob, mbox, mboxBob, true));
 			assertTrue(testRepository.isInitialized());
-		} finally {
-			conn.close();
 		}
 	}
 

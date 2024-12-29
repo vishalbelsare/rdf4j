@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.lmdb;
@@ -13,6 +16,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.IOUtils;
 import org.eclipse.rdf4j.common.iteration.Iterations;
@@ -20,17 +24,19 @@ import org.eclipse.rdf4j.common.transaction.IsolationLevels;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.repository.sail.SailRepositoryConnection;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.sail.lmdb.config.LmdbStoreConfig;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.rules.TemporaryFolder;
 
 /**
-   */
+ *
+ */
 public class QueryBenchmarkTest {
 
 	private static SailRepository repository;
@@ -57,7 +63,7 @@ public class QueryBenchmarkTest {
 		}
 	}
 
-	@BeforeClass
+	@BeforeAll
 	public static void beforeClass() throws IOException {
 		tempDir.create();
 		File file = tempDir.newFolder();
@@ -80,10 +86,10 @@ public class QueryBenchmarkTest {
 		return QueryBenchmarkTest.class.getClassLoader().getResourceAsStream(name);
 	}
 
-	@AfterClass
-	public static void afterClass() throws IOException {
-		tempDir.delete();
+	@AfterAll
+	public static void afterClass() {
 		repository.shutDown();
+		tempDir.delete();
 		tempDir = null;
 		repository = null;
 		statementList = null;
@@ -92,11 +98,10 @@ public class QueryBenchmarkTest {
 	@Test
 	public void groupByQuery() {
 		try (SailRepositoryConnection connection = repository.getConnection()) {
-			long count = connection
-					.prepareTupleQuery(query1)
-					.evaluate()
-					.stream()
-					.count();
+			long count;
+			try (var stream = connection.prepareTupleQuery(query1).evaluate().stream()) {
+				count = stream.count();
+			}
 			System.out.println(count);
 		}
 	}
@@ -104,11 +109,10 @@ public class QueryBenchmarkTest {
 	@Test
 	public void complexQuery() {
 		try (SailRepositoryConnection connection = repository.getConnection()) {
-			long count = connection
-					.prepareTupleQuery(query4)
-					.evaluate()
-					.stream()
-					.count();
+			long count;
+			try (var stream = connection.prepareTupleQuery(query4).evaluate().stream()) {
+				count = stream.count();
+			}
 			System.out.println("count: " + count);
 		}
 	}
@@ -116,11 +120,10 @@ public class QueryBenchmarkTest {
 	@Test
 	public void distinctPredicatesQuery() {
 		try (SailRepositoryConnection connection = repository.getConnection()) {
-			long count = connection
-					.prepareTupleQuery(query5)
-					.evaluate()
-					.stream()
-					.count();
+			long count;
+			try (var stream = connection.prepareTupleQuery(query5).evaluate().stream()) {
+				count = stream.count();
+			}
 			System.out.println(count);
 		}
 	}

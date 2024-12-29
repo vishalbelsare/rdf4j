@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.federated;
 
@@ -52,7 +55,7 @@ public class ServiceTests extends SPARQLBaseTest {
 				"/tests/data/data4.ttl"));
 
 		evaluateQueryPlan("/tests/service/query01.rq", "/tests/service/query01.qp");
-		execute("/tests/service/query01.rq", "/tests/service/query01.srx", false);
+		execute("/tests/service/query01.rq", "/tests/service/query01.srx", false, true);
 	}
 
 	@Test
@@ -63,7 +66,7 @@ public class ServiceTests extends SPARQLBaseTest {
 				"/tests/data/data4.ttl"));
 
 		evaluateQueryPlan("/tests/service/query01a.rq", "/tests/service/query01.qp");
-		execute("/tests/service/query01a.rq", "/tests/service/query01.srx", false);
+		execute("/tests/service/query01a.rq", "/tests/service/query01.srx", false, true);
 	}
 
 	@Test
@@ -76,7 +79,7 @@ public class ServiceTests extends SPARQLBaseTest {
 				"/tests/data/data4.ttl"));
 
 		evaluateQueryPlan("/tests/service/query02.rq", "/tests/service/query02.qp");
-		execute("/tests/service/query02.rq", "/tests/service/query02.srx", false);
+		execute("/tests/service/query02.rq", "/tests/service/query02.srx", false, true);
 	}
 
 	@Test
@@ -92,7 +95,7 @@ public class ServiceTests extends SPARQLBaseTest {
 				"/tests/data/data4.ttl"));
 
 		evaluateQueryPlan("/tests/service/query02a.rq", "/tests/service/query02a.qp");
-		execute("/tests/service/query02a.rq", "/tests/service/query02.srx", false);
+		execute("/tests/service/query02a.rq", "/tests/service/query02.srx", false, true);
 	}
 
 	@Test
@@ -108,7 +111,7 @@ public class ServiceTests extends SPARQLBaseTest {
 				"/tests/data/data4.ttl"));
 		Endpoint endpoint1 = federationContext().getEndpointManager().getEndpointByName("http://endpoint1");
 		fedxRule.removeEndpoint(endpoint1);
-		execute("/tests/service/query03.rq", "/tests/service/query03.srx", false);
+		execute("/tests/service/query03.rq", "/tests/service/query03.srx", false, true);
 	}
 
 	@Test
@@ -122,7 +125,7 @@ public class ServiceTests extends SPARQLBaseTest {
 				"/tests/data/data4.ttl"));
 
 		evaluateQueryPlan("/tests/service/query04.rq", "/tests/service/query04.qp");
-		execute("/tests/service/query04.rq", "/tests/service/query04.srx", false);
+		execute("/tests/service/query04.rq", "/tests/service/query04.srx", false, true);
 	}
 
 	@Test
@@ -133,7 +136,7 @@ public class ServiceTests extends SPARQLBaseTest {
 				"/tests/data/data4.ttl"));
 
 		evaluateQueryPlan("/tests/service/query04a.rq", "/tests/service/query04.qp");
-		execute("/tests/service/query04a.rq", "/tests/service/query04a.srx", false);
+		execute("/tests/service/query04a.rq", "/tests/service/query04a.srx", false, true);
 	}
 
 	@Test
@@ -144,7 +147,7 @@ public class ServiceTests extends SPARQLBaseTest {
 		/* two services, one becomes exclusive group, the other is evaluated as service (filter) */
 		prepareTest(Arrays.asList("/tests/data/data1.ttl", "/tests/data/data2.ttl", "/tests/data/data3.ttl",
 				"/tests/data/data4.ttl"));
-		execute("/tests/service/query05.rq", "/tests/service/query05.srx", false);
+		execute("/tests/service/query05.rq", "/tests/service/query05.srx", false, true);
 	}
 
 	@Test
@@ -156,7 +159,7 @@ public class ServiceTests extends SPARQLBaseTest {
 		 */
 		prepareTest(Arrays.asList("/tests/data/data1.ttl", "/tests/data/data2.ttl", "/tests/data/data3.ttl",
 				"/tests/data/data4.ttl"));
-		execute("/tests/service/query06.rq", "/tests/service/query06.srx", false);
+		execute("/tests/service/query06.rq", "/tests/service/query06.srx", false, true);
 	}
 
 	@Test
@@ -168,7 +171,7 @@ public class ServiceTests extends SPARQLBaseTest {
 		/* two services, both evaluated as SERVICE (FILTER), uses name of federation member in SERVICE */
 		prepareTest(Arrays.asList("/tests/data/data1.ttl", "/tests/data/data2.ttl", "/tests/data/data3.ttl",
 				"/tests/data/data4.ttl"));
-		execute("/tests/service/query07.rq", "/tests/service/query07.srx", false);
+		execute("/tests/service/query07.rq", "/tests/service/query07.srx", false, true);
 	}
 
 	@Test
@@ -183,7 +186,7 @@ public class ServiceTests extends SPARQLBaseTest {
 				"/tests/data/data4.ttl"));
 
 		evaluateQueryPlan("/tests/service/query08.rq", "/tests/service/query08.qp");
-		execute("/tests/service/query08.rq", "/tests/service/query08.srx", false);
+		execute("/tests/service/query08.rq", "/tests/service/query08.srx", false, true);
 	}
 
 	@Test
@@ -213,7 +216,7 @@ public class ServiceTests extends SPARQLBaseTest {
 				"/tests/data/data4.ttl"));
 		Endpoint endpoint1 = federationContext().getEndpointManager().getEndpointByName("http://endpoint1");
 		fedxRule.removeEndpoint(endpoint1);
-		execute("/tests/service/query03.rq", "/tests/service/query03.srx", false);
+		execute("/tests/service/query03.rq", "/tests/service/query03.srx", false, false);
 
 		Assertions.assertEquals(1,
 				((TestSparqlFederatedService) serviceResolver
@@ -237,6 +240,8 @@ public class ServiceTests extends SPARQLBaseTest {
 		repo.shutDown();
 		repo.setFederatedServiceResolver(serviceResolver);
 		repo.init();
+
+		fedxRule.getFederationContext().getConfig().withBoundJoinBlockSize(5);
 
 		/*
 		 * test select query retrieving all persons from endpoint 1 (SERVICE), endpoint not part of federation =>
@@ -268,12 +273,11 @@ public class ServiceTests extends SPARQLBaseTest {
 			Assertions.assertEquals(expected, res.stream().map(b -> b.getValue("output")).collect(Collectors.toSet()));
 		}
 
-		// first binding is evaluated using regular service, then we have groups of 4 groups of three bindings and 3
-		// groups with 15
+		// all requests are executed in bind-join with constant size
+		// for this test bind join size is set to 5, hence we see 10 bind join requests
 		TestSparqlFederatedService tfs = ((TestSparqlFederatedService) serviceResolver
 				.getService("http://localhost:18080/repositories/endpoint1"));
-		Assertions.assertEquals(1, tfs.serviceRequestCount.get());
-		Assertions.assertEquals(7, tfs.boundJoinRequestCount.get());
+		Assertions.assertEquals(10, tfs.boundJoinRequestCount.get());
 	}
 
 	@Test
@@ -421,15 +425,15 @@ public class ServiceTests extends SPARQLBaseTest {
 		}
 
 		@Override
-		public CloseableIteration<BindingSet, QueryEvaluationException> select(Service service,
+		public CloseableIteration<BindingSet> select(Service service,
 				Set<String> projectionVars, BindingSet bindings, String baseUri) throws QueryEvaluationException {
 			serviceRequestCount.incrementAndGet();
 			return super.select(service, projectionVars, bindings, baseUri);
 		}
 
 		@Override
-		public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(Service service,
-				CloseableIteration<BindingSet, QueryEvaluationException> bindings, String baseUri)
+		public CloseableIteration<BindingSet> evaluate(Service service,
+				CloseableIteration<BindingSet> bindings, String baseUri)
 				throws QueryEvaluationException {
 			boundJoinRequestCount.incrementAndGet();
 			return super.evaluate(service, bindings, baseUri);

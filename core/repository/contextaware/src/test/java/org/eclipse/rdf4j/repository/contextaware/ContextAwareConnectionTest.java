@@ -1,15 +1,18 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.repository.contextaware;
 
 import static org.eclipse.rdf4j.query.QueryLanguage.SPARQL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -36,7 +39,7 @@ import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.repository.base.RepositoryConnectionWrapper;
 import org.eclipse.rdf4j.repository.base.RepositoryWrapper;
 import org.eclipse.rdf4j.rio.RDFHandler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class ContextAwareConnectionTest {
 
@@ -60,7 +63,7 @@ public class ContextAwareConnectionTest {
 	static class InvocationHandlerStub implements InvocationHandler {
 
 		@Override
-		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+		public Object invoke(Object proxy, Method method, Object[] args) {
 			return null;
 		}
 	}
@@ -113,7 +116,7 @@ public class ContextAwareConnectionTest {
 	String queryString = "SELECT ?o WHERE { ?s ?p ?o}";
 
 	@Test
-	public void testGraphQuery() throws Exception {
+	public void testGraphQuery() {
 		RepositoryConnection stub = new RepositoryConnectionStub() {
 
 			@Override
@@ -139,7 +142,7 @@ public class ContextAwareConnectionTest {
 	}
 
 	@Test
-	public void testQuery() throws Exception {
+	public void testQuery() {
 		RepositoryConnection stub = new RepositoryConnectionStub() {
 
 			@Override
@@ -165,7 +168,7 @@ public class ContextAwareConnectionTest {
 	}
 
 	@Test
-	public void testTupleQuery() throws Exception {
+	public void testTupleQuery() {
 		RepositoryConnection stub = new RepositoryConnectionStub() {
 
 			@Override
@@ -191,7 +194,7 @@ public class ContextAwareConnectionTest {
 	}
 
 	@Test
-	public void testIncludeInferred() throws Exception {
+	public void testIncludeInferred() {
 		RepositoryConnection stub = new RepositoryConnectionStub();
 		Repository repo = stub.getRepository();
 		ContextAwareConnection a = new ContextAwareConnection(repo, stub);
@@ -202,7 +205,7 @@ public class ContextAwareConnectionTest {
 	}
 
 	@Test
-	public void testMaxQueryTime() throws Exception {
+	public void testMaxQueryTime() {
 		RepositoryConnection stub = new RepositoryConnectionStub();
 		Repository repo = stub.getRepository();
 		ContextAwareConnection a = new ContextAwareConnection(repo, stub);
@@ -213,7 +216,7 @@ public class ContextAwareConnectionTest {
 	}
 
 	@Test
-	public void testQueryLanguage() throws Exception {
+	public void testQueryLanguage() {
 		RepositoryConnection stub = new RepositoryConnectionStub();
 		Repository repo = stub.getRepository();
 		ContextAwareConnection a = new ContextAwareConnection(repo, stub);
@@ -224,7 +227,7 @@ public class ContextAwareConnectionTest {
 	}
 
 	@Test
-	public void testBaseURI() throws Exception {
+	public void testBaseURI() {
 		RepositoryConnection stub = new RepositoryConnectionStub();
 		Repository repo = stub.getRepository();
 		ContextAwareConnection a = new ContextAwareConnection(repo, stub);
@@ -235,7 +238,7 @@ public class ContextAwareConnectionTest {
 	}
 
 	@Test
-	public void testReadContexts() throws Exception {
+	public void testReadContexts() {
 		RepositoryConnection stub = new RepositoryConnectionStub();
 		Repository repo = stub.getRepository();
 		ContextAwareConnection a = new ContextAwareConnection(repo, stub);
@@ -246,7 +249,7 @@ public class ContextAwareConnectionTest {
 	}
 
 	@Test
-	public void testRemoveContexts() throws Exception {
+	public void testRemoveContexts() {
 		RepositoryConnection stub = new RepositoryConnectionStub();
 		Repository repo = stub.getRepository();
 		ContextAwareConnection a = new ContextAwareConnection(repo, stub);
@@ -257,7 +260,7 @@ public class ContextAwareConnectionTest {
 	}
 
 	@Test
-	public void testAddContexts() throws Exception {
+	public void testAddContexts() {
 		RepositoryConnection stub = new RepositoryConnectionStub();
 		Repository repo = stub.getRepository();
 		ContextAwareConnection a = new ContextAwareConnection(repo, stub);
@@ -268,7 +271,7 @@ public class ContextAwareConnectionTest {
 	}
 
 	@Test
-	public void testArchiveContexts() throws Exception {
+	public void testArchiveContexts() {
 		RepositoryConnection stub = new RepositoryConnectionStub();
 		Repository repo = stub.getRepository();
 		ContextAwareConnection a = new ContextAwareConnection(repo, stub);
@@ -279,7 +282,7 @@ public class ContextAwareConnectionTest {
 	}
 
 	@Test
-	public void testInsertContexts() throws Exception {
+	public void testInsertContexts() {
 		RepositoryConnection stub = new RepositoryConnectionStub();
 		Repository repo = stub.getRepository();
 		ContextAwareConnection a = new ContextAwareConnection(repo, stub);

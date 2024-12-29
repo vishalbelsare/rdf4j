@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.model.util;
 
@@ -14,6 +17,7 @@ import static org.eclipse.rdf4j.model.util.Values.iri;
 import static org.eclipse.rdf4j.model.util.Values.literal;
 import static org.eclipse.rdf4j.model.util.Values.namespace;
 import static org.eclipse.rdf4j.model.util.Values.triple;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -41,8 +45,8 @@ import org.eclipse.rdf4j.model.impl.TreeModel;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests on {@link Values} convenience functions.
@@ -52,13 +56,12 @@ import org.junit.Test;
  * test common cases against user expectations here.
  *
  * @author Jeen Broekstra
- *
  */
 public class ValuesTest {
 
 	private ValueFactory vf;
 
-	@Before
+	@BeforeEach
 	public void setUp() {
 		vf = mock(ValueFactory.class);
 	}
@@ -87,14 +90,14 @@ public class ValuesTest {
 		verify(vf).createIRI(RDF.NAMESPACE, "type");
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testInvalidIri1() {
-		iri("http://an invalid iri/");
+		assertThrows(IllegalArgumentException.class, () -> iri("http://an invalid iri/"));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testInvalidIri2() {
-		iri("http://valid-namespace.org/", "invalid localname");
+		assertThrows(IllegalArgumentException.class, () -> iri("http://valid-namespace.org/", "invalid localname"));
 	}
 
 	@Test
@@ -267,16 +270,16 @@ public class ValuesTest {
 		verify(vf).createLiteral(lexValue, XSD.INT);
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testInvalidTypedLiteral() {
 		String lexValue = "fourty two";
-		literal(lexValue, XSD.INT);
+		assertThrows(IllegalArgumentException.class, () -> literal(lexValue, XSD.INT));
 	}
 
-	@Test(expected = IllegalArgumentException.class)
+	@Test
 	public void testInvalidTypedLiteralCoreDatatype() {
 		String lexValue = "fourty two";
-		literal(lexValue, CoreDatatype.XSD.INT);
+		assertThrows(IllegalArgumentException.class, () -> literal(lexValue, CoreDatatype.XSD.INT));
 	}
 
 	@Test
@@ -567,14 +570,14 @@ public class ValuesTest {
 	}
 
 	@Test()
-	public void testLiteralObjectNull() throws Exception {
+	public void testLiteralObjectNull() {
 		Object obj = null;
 		assertThatThrownBy(() -> literal(obj)).isInstanceOf(NullPointerException.class)
 				.hasMessageContaining("object may not be null");
 	}
 
 	@Test
-	public void testLiteralObjectBoolean() throws Exception {
+	public void testLiteralObjectBoolean() {
 		Object obj = Boolean.TRUE;
 		Literal l = literal(obj);
 		assertThat(l).isNotNull();
@@ -583,7 +586,7 @@ public class ValuesTest {
 	}
 
 	@Test
-	public void testLiteralObjectByte() throws Exception {
+	public void testLiteralObjectByte() {
 		Object obj = Integer.valueOf(42).byteValue();
 		Literal l = literal(obj);
 		assertThat(l).isNotNull();
@@ -592,7 +595,7 @@ public class ValuesTest {
 	}
 
 	@Test
-	public void testLiteralObjectDouble() throws Exception {
+	public void testLiteralObjectDouble() {
 		Object obj = Double.valueOf(42.0);
 		Literal l = literal(obj);
 		assertThat(l).isNotNull();
@@ -601,7 +604,7 @@ public class ValuesTest {
 	}
 
 	@Test
-	public void testLiteralObjectFloat() throws Exception {
+	public void testLiteralObjectFloat() {
 		Object obj = Float.valueOf(42);
 		Literal l = literal(obj);
 		assertThat(l).isNotNull();
@@ -610,7 +613,7 @@ public class ValuesTest {
 	}
 
 	@Test
-	public void testLiteralObjectBigDecimal() throws Exception {
+	public void testLiteralObjectBigDecimal() {
 		Object obj = BigDecimal.valueOf(42.1);
 		Literal l = literal(obj);
 		assertThat(l).isNotNull();
@@ -619,7 +622,7 @@ public class ValuesTest {
 	}
 
 	@Test
-	public void testLiteralObjectInteger() throws Exception {
+	public void testLiteralObjectInteger() {
 		Object obj = Integer.valueOf(42);
 		Literal l = literal(obj);
 		assertThat(l).isNotNull();
@@ -628,7 +631,7 @@ public class ValuesTest {
 	}
 
 	@Test
-	public void testLiteralObjectBigInteger() throws Exception {
+	public void testLiteralObjectBigInteger() {
 		Object obj = BigInteger.valueOf(42l);
 		Literal l = literal(obj);
 		assertThat(l).isNotNull();
@@ -637,7 +640,7 @@ public class ValuesTest {
 	}
 
 	@Test
-	public void testLiteralObjectShort() throws Exception {
+	public void testLiteralObjectShort() {
 		Object obj = Short.parseShort("42");
 		Literal l = literal(obj);
 		assertThat(l).isNotNull();
@@ -646,7 +649,7 @@ public class ValuesTest {
 	}
 
 	@Test
-	public void testLiteralObjectXMLGregorianCalendar() throws Exception {
+	public void testLiteralObjectXMLGregorianCalendar() {
 		GregorianCalendar c = new GregorianCalendar();
 		c.setTime(new Date());
 		try {
@@ -660,7 +663,7 @@ public class ValuesTest {
 	}
 
 	@Test
-	public void testLiteralObjectDate() throws Exception {
+	public void testLiteralObjectDate() {
 		Object obj = new Date();
 		Literal l = literal(obj);
 		assertThat(l).isNotNull();
@@ -668,7 +671,7 @@ public class ValuesTest {
 	}
 
 	@Test
-	public void testLiteralTemporalPeriod() throws Exception {
+	public void testLiteralTemporalPeriod() {
 		Object obj = Period.ofWeeks(42);
 		Literal l = literal(obj);
 		assertThat(l).isNotNull();
@@ -677,7 +680,7 @@ public class ValuesTest {
 	}
 
 	@Test
-	public void testLiteralObjectString() throws Exception {
+	public void testLiteralObjectString() {
 		Object obj = "random unique string";
 		Literal l = literal(obj);
 		assertThat(l).isNotNull();
@@ -686,7 +689,7 @@ public class ValuesTest {
 	}
 
 	@Test
-	public void testLiteralObjectObject() throws Exception {
+	public void testLiteralObjectObject() {
 		Object obj = new Object();
 		Literal l = literal(obj);
 		assertThat(l).isNotNull();

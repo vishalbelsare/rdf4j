@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.common.iteration;
 
@@ -17,17 +20,17 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Arjohn Kampman
  */
-public abstract class TimeLimitIteration<E, X extends Exception> extends IterationWrapper<E, X> {
+public abstract class TimeLimitIteration<E> extends IterationWrapper<E> {
 
 	private static final Timer timer = new Timer("TimeLimitIteration", true);
 
 	private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-	private final InterruptTask<E, X> interruptTask;
+	private final InterruptTask<E> interruptTask;
 
 	private final AtomicBoolean isInterrupted = new AtomicBoolean(false);
 
-	protected TimeLimitIteration(Iteration<? extends E, ? extends X> iter, long timeLimit) {
+	protected TimeLimitIteration(CloseableIteration<? extends E> iter, long timeLimit) {
 		super(iter);
 
 		assert timeLimit > 0 : "time limit must be a positive number, is: " + timeLimit;
@@ -38,7 +41,7 @@ public abstract class TimeLimitIteration<E, X extends Exception> extends Iterati
 	}
 
 	@Override
-	public boolean hasNext() throws X {
+	public boolean hasNext() {
 		checkInterrupted();
 		if (isClosed()) {
 			return false;
@@ -56,7 +59,7 @@ public abstract class TimeLimitIteration<E, X extends Exception> extends Iterati
 	}
 
 	@Override
-	public E next() throws X {
+	public E next() {
 		checkInterrupted();
 		if (isClosed()) {
 			throw new NoSuchElementException("The iteration has been closed.");
@@ -72,7 +75,7 @@ public abstract class TimeLimitIteration<E, X extends Exception> extends Iterati
 	}
 
 	@Override
-	public void remove() throws X {
+	public void remove() {
 		checkInterrupted();
 		if (isClosed()) {
 			throw new IllegalStateException("The iteration has been closed.");
@@ -88,7 +91,7 @@ public abstract class TimeLimitIteration<E, X extends Exception> extends Iterati
 	}
 
 	@Override
-	protected void handleClose() throws X {
+	protected void handleClose() {
 		try {
 			interruptTask.cancel();
 		} finally {
@@ -96,7 +99,7 @@ public abstract class TimeLimitIteration<E, X extends Exception> extends Iterati
 		}
 	}
 
-	private final void checkInterrupted() throws X {
+	private void checkInterrupted() {
 		if (isInterrupted.get()) {
 			try {
 				throwInterruptedException();
@@ -104,6 +107,9 @@ public abstract class TimeLimitIteration<E, X extends Exception> extends Iterati
 				try {
 					close();
 				} catch (Exception e) {
+					if (e instanceof InterruptedException) {
+						Thread.currentThread().interrupt();
+					}
 					logger.warn("TimeLimitIteration timed out and failed to close successfully: ", e);
 				}
 			}
@@ -114,9 +120,8 @@ public abstract class TimeLimitIteration<E, X extends Exception> extends Iterati
 	 * If the iteration is interrupted by its time limit, this method is called to generate and throw the appropriate
 	 * exception.
 	 *
-	 * @throws X The generic class of exceptions thrown by this method.
 	 */
-	protected abstract void throwInterruptedException() throws X;
+	protected abstract void throwInterruptedException();
 
 	/**
 	 * Users of this class must call this method to interrupt the execution at the next available point. It does not
@@ -130,6 +135,9 @@ public abstract class TimeLimitIteration<E, X extends Exception> extends Iterati
 		try {
 			close();
 		} catch (Exception e) {
+			if (e instanceof InterruptedException) {
+				Thread.currentThread().interrupt();
+			}
 			logger.warn("TimeLimitIteration timed out and failed to close successfully: ", e);
 		}
 	}

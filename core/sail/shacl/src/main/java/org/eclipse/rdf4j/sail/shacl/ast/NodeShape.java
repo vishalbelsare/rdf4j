@@ -1,10 +1,13 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
- ******************************************************************************/
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.sail.shacl.ast;
 
 import java.util.List;
@@ -14,11 +17,12 @@ import java.util.stream.Collectors;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
-import org.eclipse.rdf4j.sail.shacl.ShaclSail;
 import org.eclipse.rdf4j.sail.shacl.SourceConstraintComponent;
 import org.eclipse.rdf4j.sail.shacl.ValidationSettings;
+import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher.Variable;
 import org.eclipse.rdf4j.sail.shacl.ast.constraintcomponents.ConstraintComponent;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.EmptyNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.PlanNode;
@@ -32,7 +36,7 @@ import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 import org.eclipse.rdf4j.sail.shacl.wrapper.data.RdfsSubClassOfReasoner;
 import org.eclipse.rdf4j.sail.shacl.wrapper.shape.ShapeSource;
 
-public class NodeShape extends Shape implements ConstraintComponent, Identifiable {
+public class NodeShape extends Shape {
 
 	public NodeShape() {
 	}
@@ -42,13 +46,13 @@ public class NodeShape extends Shape implements ConstraintComponent, Identifiabl
 	}
 
 	public static NodeShape getInstance(ShaclProperties properties,
-			ShapeSource shapeSource, Cache cache, ShaclSail shaclSail) {
+			ShapeSource shapeSource, ParseSettings parseSettings, Cache cache) {
 
 		NodeShape shape = (NodeShape) cache.get(properties.getId());
 		if (shape == null) {
 			shape = new NodeShape();
 			cache.put(properties.getId(), shape);
-			shape.populate(properties, shapeSource, cache, shaclSail);
+			shape.populate(properties, shapeSource, parseSettings, cache);
 		}
 
 		return shape;
@@ -56,8 +60,8 @@ public class NodeShape extends Shape implements ConstraintComponent, Identifiabl
 
 	@Override
 	public void populate(ShaclProperties properties, ShapeSource connection,
-			Cache cache, ShaclSail shaclSail) {
-		super.populate(properties, connection, cache, shaclSail);
+			ParseSettings parseSettings, Cache cache) {
+		super.populate(properties, connection, parseSettings, cache);
 
 		if (properties.getMinCount() != null) {
 			throw new IllegalStateException("NodeShapes do not support sh:MinCount in " + getId());
@@ -75,7 +79,7 @@ public class NodeShape extends Shape implements ConstraintComponent, Identifiabl
 		 * Also not supported here is: - sh:lessThan - sh:lessThanOrEquals - sh:qualifiedValueShape
 		 */
 
-		constraintComponents = getConstraintComponents(properties, connection, cache, shaclSail);
+		constraintComponents = getConstraintComponents(properties, connection, parseSettings, cache);
 
 	}
 
@@ -98,10 +102,10 @@ public class NodeShape extends Shape implements ConstraintComponent, Identifiabl
 
 		}
 
-		if (cycleDetection.contains(getId())) {
-			return;
-		}
-		cycleDetection.add(getId());
+//		if (cycleDetection.contains(getId())) {
+//			return;
+//		}
+//		cycleDetection.add(getId());
 
 		constraintComponents.forEach(c -> c.toModel(getId(), null, model, cycleDetection));
 
@@ -121,7 +125,7 @@ public class NodeShape extends Shape implements ConstraintComponent, Identifiabl
 							validationSettings, negatePlan,
 							negateChildren, Scope.nodeShape);
 					if (!(c instanceof PropertyShape)) {
-						return validationQuery1.withConstraintComponent(c.getConstraintComponent());
+						return validationQuery1.withConstraintComponent(c);
 					}
 					return validationQuery1;
 				})
@@ -133,7 +137,7 @@ public class NodeShape extends Shape implements ConstraintComponent, Identifiabl
 			assert !(constraintComponents.get(0) instanceof PropertyShape);
 
 			validationQuery = validationQuery.withShape(this);
-			validationQuery = validationQuery.withSeverity(severity);
+			validationQuery = validationQuery.withSeverity(Severity.orDefault(severity));
 			validationQuery.makeCurrentStateValidationReport();
 		}
 
@@ -167,16 +171,17 @@ public class NodeShape extends Shape implements ConstraintComponent, Identifiabl
 
 				validationPlanNode = new ValidationReportNode(validationPlanNode, t -> {
 					return new ValidationResult(t.getActiveTarget(), t.getActiveTarget(), this,
-							constraintComponent.getConstraintComponent(), getSeverity(), t.getScope(), t.getContexts(),
+							constraintComponent, getSeverity(), t.getScope(), t.getContexts(),
 							getContexts());
-				});
+				}, connectionsGroup);
 			}
 
 			if (scope == Scope.propertyShape) {
-				validationPlanNode = Unique.getInstance(new ShiftToPropertyShape(validationPlanNode), true);
+				validationPlanNode = Unique.getInstance(new ShiftToPropertyShape(validationPlanNode, connectionsGroup),
+						true, connectionsGroup);
 			}
 
-			union = UnionNode.getInstance(union, validationPlanNode);
+			union = UnionNode.getInstance(connectionsGroup, union, validationPlanNode);
 		}
 
 		return union;
@@ -197,26 +202,30 @@ public class NodeShape extends Shape implements ConstraintComponent, Identifiabl
 
 	@Override
 	public PlanNode getAllTargetsPlan(ConnectionsGroup connectionsGroup, Resource[] dataGraph, Scope scope,
-			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
+			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider,
+			ValidationSettings validationSettings) {
 
 		PlanNode planNode = constraintComponents.stream()
 				.map(c -> c.getAllTargetsPlan(connectionsGroup, dataGraph, Scope.nodeShape,
-						new StatementMatcher.StableRandomVariableProvider()))
+						new StatementMatcher.StableRandomVariableProvider(), validationSettings))
 				.distinct()
-				.reduce(UnionNode::getInstanceDedupe)
+				.reduce((nodes, nodes2) -> UnionNode.getInstanceDedupe(connectionsGroup, nodes, nodes2))
 				.orElse(EmptyNode.getInstance());
 
-		planNode = UnionNode.getInstanceDedupe(planNode,
-				getTargetChain()
-						.getEffectiveTarget(Scope.nodeShape, connectionsGroup.getRdfsSubClassOfReasoner(),
-								stableRandomVariableProvider)
-						.getPlanNode(connectionsGroup, dataGraph, Scope.nodeShape, true, null));
+		if (connectionsGroup.getStats().hasRemoved()) {
+			PlanNode planNodeEffectiveTarget = getTargetChain()
+					.getEffectiveTarget(Scope.nodeShape, connectionsGroup.getRdfsSubClassOfReasoner(),
+							stableRandomVariableProvider)
+					.getPlanNode(connectionsGroup, dataGraph, Scope.nodeShape, true, null);
 
-		if (scope == Scope.propertyShape) {
-			planNode = Unique.getInstance(new ShiftToPropertyShape(planNode), true);
+			planNode = UnionNode.getInstanceDedupe(connectionsGroup, planNode, planNodeEffectiveTarget);
 		}
 
-		planNode = Unique.getInstance(planNode, false);
+		if (scope == Scope.propertyShape) {
+			planNode = Unique.getInstance(new ShiftToPropertyShape(planNode, connectionsGroup), true, connectionsGroup);
+		}
+
+		planNode = Unique.getInstance(planNode, false, connectionsGroup);
 
 		return planNode;
 	}
@@ -233,8 +242,8 @@ public class NodeShape extends Shape implements ConstraintComponent, Identifiabl
 	}
 
 	@Override
-	public SparqlFragment buildSparqlValidNodes_rsx_targetShape(StatementMatcher.Variable subject,
-			StatementMatcher.Variable object,
+	public SparqlFragment buildSparqlValidNodes_rsx_targetShape(Variable<Value> subject,
+			Variable<Value> object,
 			RdfsSubClassOfReasoner rdfsSubClassOfReasoner, Scope scope,
 			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
 

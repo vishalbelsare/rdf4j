@@ -1,15 +1,15 @@
 /*******************************************************************************
  * Copyright (c) 2018 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl;
-
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertTrue;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -26,6 +26,7 @@ import org.eclipse.rdf4j.sail.shacl.ast.planNodes.PlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.ValidationTuple;
 import org.eclipse.rdf4j.sail.shacl.mock.MockConsumePlanNode;
 import org.eclipse.rdf4j.sail.shacl.mock.MockInputPlanNode;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -40,7 +41,7 @@ public class EqualsJoinTest {
 		PlanNode left = new MockInputPlanNode(List.of("a"));
 		PlanNode right = new MockInputPlanNode(List.of("a"), List.of("b"));
 
-		EqualsJoin equalsJoin = new EqualsJoin(left, right, false);
+		EqualsJoin equalsJoin = new EqualsJoin(left, right, false, null);
 
 		List<ValidationTuple> tuples = new MockConsumePlanNode(equalsJoin).asList();
 
@@ -54,7 +55,7 @@ public class EqualsJoinTest {
 		PlanNode left = new MockInputPlanNode(List.of("a"), List.of("c"));
 		PlanNode right = new MockInputPlanNode(List.of("a"), List.of("b"), List.of("c"));
 
-		EqualsJoin equalsJoin = new EqualsJoin(left, right, false);
+		EqualsJoin equalsJoin = new EqualsJoin(left, right, false, null);
 
 		List<ValidationTuple> tuples = new MockConsumePlanNode(equalsJoin).asList();
 
@@ -68,7 +69,7 @@ public class EqualsJoinTest {
 		PlanNode right = new MockInputPlanNode(List.of("a"), List.of("c"));
 		PlanNode left = new MockInputPlanNode(List.of("a"), List.of("b"), List.of("c"));
 
-		EqualsJoin equalsJoin = new EqualsJoin(left, right, false);
+		EqualsJoin equalsJoin = new EqualsJoin(left, right, false, null);
 
 		List<ValidationTuple> tuples = new MockConsumePlanNode(equalsJoin).asList();
 
@@ -82,7 +83,7 @@ public class EqualsJoinTest {
 		PlanNode left = new MockInputPlanNode(List.of("b"), List.of("c"));
 		PlanNode right = new MockInputPlanNode(List.of("a"), List.of("d"), List.of("e"));
 
-		EqualsJoin equalsJoin = new EqualsJoin(left, right, false);
+		EqualsJoin equalsJoin = new EqualsJoin(left, right, false, null);
 
 		List<ValidationTuple> tuples = new MockConsumePlanNode(equalsJoin).asList();
 
@@ -96,7 +97,7 @@ public class EqualsJoinTest {
 		PlanNode left = new MockInputPlanNode(List.of("b"), List.of("c"));
 		PlanNode right = new MockInputPlanNode(List.of("a"), List.of("d"), List.of("c"));
 
-		EqualsJoin equalsJoin = new EqualsJoin(left, right, false);
+		EqualsJoin equalsJoin = new EqualsJoin(left, right, false, null);
 
 		List<ValidationTuple> tuples = new MockConsumePlanNode(equalsJoin).asList();
 
@@ -112,7 +113,7 @@ public class EqualsJoinTest {
 		PlanNode right = new MockInputPlanNode(Arrays.asList("a", "1"), Arrays.asList("b", "1"),
 				Arrays.asList("b", "1"), Arrays.asList("c", "1"));
 
-		EqualsJoin equalsJoin = new EqualsJoin(left, right, true);
+		EqualsJoin equalsJoin = new EqualsJoin(left, right, true, null);
 
 		List<ValidationTuple> tuples = new MockConsumePlanNode(equalsJoin).asList();
 
@@ -121,7 +122,7 @@ public class EqualsJoinTest {
 	}
 
 	@SafeVarargs
-	private final void verify(List<ValidationTuple> actual, List<String>... expect) {
+	private void verify(List<ValidationTuple> actual, List<String>... expect) {
 
 //		System.out.println(actual);
 
@@ -141,10 +142,10 @@ public class EqualsJoinTest {
 
 		Set<ValidationTuple> actualSet = new HashSet<>(actual);
 
-		assertEquals(collect, actualSet);
+		Assertions.assertEquals(collect, actualSet);
 
-		assertTrue(collect.containsAll(actualSet));
-		assertTrue(actualSet.containsAll(collect));
+		Assertions.assertTrue(collect.containsAll(actualSet));
+		Assertions.assertTrue(actualSet.containsAll(collect));
 
 	}
 

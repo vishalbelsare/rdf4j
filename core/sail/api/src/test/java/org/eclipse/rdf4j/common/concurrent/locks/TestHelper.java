@@ -1,11 +1,13 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
- *  All rights reserved. This program and the accompanying materials
- *  are made available under the terms of the Eclipse Distribution License v1.0
- *  which accompanies this distribution, and is available at
- *  http://www.eclipse.org/org/documents/edl-v10.php.
- ******************************************************************************/
-
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Distribution License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.common.concurrent.locks;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -13,7 +15,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.concurrent.CountDownLatch;
 
+import org.eclipse.rdf4j.common.concurrent.locks.diagnostics.ConcurrentCleaner;
+
 public class TestHelper {
+
+	private final static ConcurrentCleaner cleaner = new ConcurrentCleaner();
 
 	public static void callGC(AbstractReadWriteLockManager lockManager) throws InterruptedException {
 		while (lockManager.isReaderActive() || lockManager.isWriterActive()) {
@@ -30,6 +36,13 @@ public class TestHelper {
 	}
 
 	public static void callGC(LockManager lockManager) throws InterruptedException {
+		while (lockManager.isActiveLock()) {
+			System.gc();
+			Thread.sleep(1);
+		}
+	}
+
+	public static void callGC(ExclusiveReentrantLockManager lockManager) throws InterruptedException {
 		while (lockManager.isActiveLock()) {
 			System.gc();
 			Thread.sleep(1);

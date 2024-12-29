@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.common.iteration;
@@ -16,13 +19,13 @@ import java.util.NoSuchElementException;
  * or where a created iteration consumes scarce resources like JDBC-connections or memory. Subclasses must implement the
  * <var>createIteration</var> method, which is called once when the iteration is first needed.
  */
-public abstract class DelayedIteration<E, X extends Exception> extends AbstractCloseableIteration<E, X> {
+public abstract class DelayedIteration<E> extends AbstractCloseableIteration<E> {
 
 	/*-----------*
 	 * Variables *
 	 *-----------*/
 
-	private Iteration<? extends E, ? extends X> iter;
+	private CloseableIteration<? extends E> iter;
 
 	/*--------------*
 	 * Constructors *
@@ -43,23 +46,20 @@ public abstract class DelayedIteration<E, X extends Exception> extends AbstractC
 	 * Creates the iteration that should be iterated over. This method is called only once, when the iteration is first
 	 * needed.
 	 */
-	protected abstract Iteration<? extends E, ? extends X> createIteration() throws X;
+	protected abstract CloseableIteration<? extends E> createIteration();
 
 	/**
 	 * Calls the <var>hasNext</var> method of the underlying iteration.
 	 */
 	@Override
-	public boolean hasNext() throws X {
+	public boolean hasNext() {
 		if (isClosed()) {
 			return false;
 		}
-		Iteration<? extends E, ? extends X> resultIter = iter;
+		CloseableIteration<? extends E> resultIter = iter;
 		if (resultIter == null) {
 			// Underlying iterator has not yet been initialized
-			resultIter = iter;
-			if (resultIter == null) {
-				resultIter = iter = createIteration();
-			}
+			resultIter = iter = createIteration();
 		}
 
 		return resultIter.hasNext();
@@ -69,17 +69,15 @@ public abstract class DelayedIteration<E, X extends Exception> extends AbstractC
 	 * Calls the <var>next</var> method of the underlying iteration.
 	 */
 	@Override
-	public E next() throws X {
+	public E next() {
 		if (isClosed()) {
 			throw new NoSuchElementException("Iteration has been closed");
 		}
-		Iteration<? extends E, ? extends X> resultIter = iter;
+		CloseableIteration<? extends E> resultIter = iter;
 		if (resultIter == null) {
 			// Underlying iterator has not yet been initialized
-			resultIter = iter;
-			if (resultIter == null) {
-				resultIter = iter = createIteration();
-			}
+			resultIter = iter = createIteration();
+
 		}
 
 		return resultIter.next();
@@ -89,11 +87,11 @@ public abstract class DelayedIteration<E, X extends Exception> extends AbstractC
 	 * Calls the <var>remove</var> method of the underlying iteration.
 	 */
 	@Override
-	public void remove() throws X {
+	public void remove() {
 		if (isClosed()) {
 			throw new IllegalStateException("The iteration has been closed.");
 		}
-		Iteration<? extends E, ? extends X> resultIter = iter;
+		CloseableIteration<? extends E> resultIter = iter;
 		if (resultIter == null) {
 			throw new IllegalStateException("Underlying iteration was null");
 		}
@@ -106,14 +104,9 @@ public abstract class DelayedIteration<E, X extends Exception> extends AbstractC
 	 * {@link CloseableIteration}.
 	 */
 	@Override
-	protected void handleClose() throws X {
-		try {
-			super.handleClose();
-		} finally {
-			Iteration<? extends E, ? extends X> toClose = iter;
-			if (toClose != null) {
-				Iterations.closeCloseable(toClose);
-			}
+	protected void handleClose() {
+		if (iter != null) {
+			iter.close();
 		}
 	}
 }

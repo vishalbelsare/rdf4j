@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.repository.sparql;
 
@@ -14,14 +17,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.apache.http.client.HttpClient;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.common.iteration.ConvertingIteration;
 import org.eclipse.rdf4j.common.iteration.EmptyIteration;
 import org.eclipse.rdf4j.common.iteration.ExceptionConvertingIteration;
-import org.eclipse.rdf4j.common.iteration.Iteration;
 import org.eclipse.rdf4j.common.iteration.SingletonIteration;
 import org.eclipse.rdf4j.http.client.HttpClientDependent;
 import org.eclipse.rdf4j.http.client.SPARQLProtocolSession;
@@ -37,6 +41,8 @@ import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.impl.DynamicModelFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.Literals;
+import org.eclipse.rdf4j.model.vocabulary.RDF4J;
+import org.eclipse.rdf4j.model.vocabulary.SESAME;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.BooleanQuery;
 import org.eclipse.rdf4j.query.GraphQuery;
@@ -77,6 +83,8 @@ import org.eclipse.rdf4j.rio.helpers.StatementCollector;
  */
 public class SPARQLConnection extends AbstractRepositoryConnection implements HttpClientDependent {
 
+	private static final String COUNT_EVERYTHING = "SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }";
+
 	private static final String EVERYTHING = "CONSTRUCT { ?s ?p ?o } WHERE { ?s ?p ?o }";
 
 	private static final String EVERYTHING_WITH_GRAPH = "SELECT * WHERE {  ?s ?p ?o . OPTIONAL { GRAPH ?ctx { ?s ?p ?o } } }";
@@ -91,16 +99,16 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 
 	private final SPARQLProtocolSession client;
 
-	private ModelFactory modelFactory = new DynamicModelFactory();
+	private final ModelFactory modelFactory = new DynamicModelFactory();
 
 	private StringBuilder sparqlTransaction;
 
-	private Object transactionLock = new Object();
+	private final Object transactionLock = new Object();
 
 	private Model pendingAdds;
 	private Model pendingRemoves;
 
-	private int maxPendingSize = DEFAULT_MAX_PENDING_SIZE;
+	private final int maxPendingSize = DEFAULT_MAX_PENDING_SIZE;
 
 	private final boolean quadMode;
 	private boolean silentClear;
@@ -135,14 +143,14 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 	 * will always be success.
 	 * <p>
 	 * Stores that do not record empty graphs will always return success. </blockquote>
-	 *
+	 * <p>
 	 * Note that in most SPARQL endpoint implementations not recording empty graphs is the default behavior, and setting
 	 * this flag to <code>true</code> will have no effect. Setting this flag will have no effect on any other errors or
 	 * other API or SPARQL operations: <strong>only</strong> the behavior of the {@link #clear(Resource...)} API
 	 * operation is modified to respond with a success message when removing a non-existent named graph.
 	 *
 	 * @param silent the value to set this to.
-	 * @see https://www.w3.org/TR/sparql11-update/#clear
+	 * @see <a href="https://www.w3.org/TR/sparql11-update/#clear">https://www.w3.org/TR/sparql11-update/#clear</a>
 	 */
 	public void setSilentClear(boolean silent) {
 		this.silentClear = silent;
@@ -154,7 +162,7 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 	 * <p>
 	 * By default, the SPARQL connection executes the {@link #clear(Resource...)} API operation by converting it to a
 	 * SPARQL `CLEAR GRAPH` update operation. This operation has an optional <code>SILENT</code> modifier, which can be
-	 * enabled by setting this flag to <code>true</code>. The behavior of this modifier is speficied as follows in the
+	 * enabled by setting this flag to <code>true</code>. The behavior of this modifier is specified as follows in the
 	 * SPARQL 1.1 Recommendation:
 	 *
 	 * <blockquote> If the store records the existence of empty graphs, then the SPARQL 1.1 Update service, by default,
@@ -162,17 +170,17 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 	 * will always be success.
 	 * <p>
 	 * Stores that do not record empty graphs will always return success. </blockquote>
-	 *
+	 * <p>
 	 * Note that in most SPARQL endpoint implementations not recording empty graphs is the default behavior, and setting
 	 * this flag to <code>true</code> will have no effect. Setting this flag will have no effect on any other errors or
 	 * other API or SPARQL operations: <strong>only</strong> the behavior of the {@link #clear(Resource...)} API
 	 * operation is modified to respond with a success message when removing a non-existent named graph.
 	 *
-	 * @param silent the value to set this to.
-	 * @see https://www.w3.org/TR/sparql11-update/#clear
-	 * @deprecated since 3.6.0 - use {@link #setSilentClear(boolean)} instead.
+	 * @param flag the value to set this to.
+	 * @see <a href="https://www.w3.org/TR/sparql11-update/#clear">https://www.w3.org/TR/sparql11-update/#clear</a>
+	 * @deprecated Use {@link #setSilentClear(boolean)} instead.
 	 */
-	@Deprecated
+	@Deprecated(since = "3.6.0")
 	public void enableSilentMode(boolean flag) {
 		setSilentClear(flag);
 	}
@@ -224,7 +232,7 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 			TupleQuery query = prepareTupleQuery(SPARQL, NAMEDGRAPHS, "");
 			iter = query.evaluate();
 			result = new RepositoryResult<>(new ExceptionConvertingIteration<Resource, RepositoryException>(
-					new ConvertingIteration<BindingSet, Resource, QueryEvaluationException>(iter) {
+					new ConvertingIteration<BindingSet, Resource>(iter) {
 
 						@Override
 						protected Resource convert(BindingSet bindings) throws QueryEvaluationException {
@@ -233,7 +241,7 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 					}) {
 
 				@Override
-				protected RepositoryException convert(Exception e) {
+				protected RepositoryException convert(RuntimeException e) {
 					return new RepositoryException(e);
 				}
 			});
@@ -245,14 +253,8 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 			throw new RepositoryException(e);
 		} finally {
 			if (!allGood) {
-				try {
-					if (result != null) {
-						result.close();
-					}
-				} finally {
-					if (iter != null) {
-						iter.close();
-					}
+				if (iter != null) {
+					iter.close();
 				}
 			}
 		}
@@ -285,14 +287,59 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 
 	@Override
 	public long size(Resource... contexts) throws RepositoryException {
-		try (RepositoryResult<Statement> stmts = getStatements(null, null, null, true, contexts)) {
-			long i = 0;
-			while (stmts.hasNext()) {
-				stmts.next();
-				i++;
+		String query = sizeAsTupleQuery(contexts);
+		TupleQuery tq = prepareTupleQuery(SPARQL, query);
+		try (TupleQueryResult res = tq.evaluate()) {
+			if (res.hasNext()) {
+
+				Value value = res.next().getBinding("count").getValue();
+				if (value instanceof Literal) {
+					return ((Literal) value).longValue();
+				} else {
+					return 0;
+				}
 			}
-			return i;
+		} catch (QueryEvaluationException e) {
+			throw new RepositoryException(e);
 		}
+		return 0;
+	}
+
+	String sizeAsTupleQuery(Resource... contexts) {
+
+		// in case the context is null we want the
+		// default graph of the remote store i.e. ask without graph/from.
+		if (contexts != null && isQuadMode() && contexts.length > 0) {
+			// this is an optimization for the case that we can use a GRAPH instead of a FROM.
+			if (contexts.length == 1 && isExposableGraphIri(contexts[0])) {
+				return "SELECT (COUNT(*) AS ?count) WHERE { GRAPH <" + contexts[0].stringValue()
+						+ "> { ?s ?p ?o}}";
+			} else {
+				// If we had an default graph setting that is sesame/rdf4j specific
+				// we must drop it before sending it over the wire. Otherwise
+				// gather up the given contexts and send them as a from clauses
+				// to make the matching dataset.
+				String graphs = Arrays.stream(contexts)
+						.filter(SPARQLConnection::isExposableGraphIri)
+						.map(Resource::stringValue)
+						.map(s -> "FROM <" + s + ">")
+						.collect(Collectors.joining(" "));
+				return "SELECT (COUNT(*) AS ?count) " + graphs + "WHERE { ?s ?p ?o}";
+			}
+		} else {
+			return COUNT_EVERYTHING;
+		}
+	}
+
+	/**
+	 * For the sparql protocol a context must be an IRI However we can't send out the RDF4j internal default graph IRIs
+	 *
+	 * @param resource to test if it can be the IRI for a named graph
+	 * @return true if it the input can be a foreign named graph.
+	 */
+	private static boolean isExposableGraphIri(Resource resource) {
+		// We use the instanceof test to avoid any issue with a null pointer.
+		return resource instanceof IRI && !RDF4J.NIL.equals(resource) && !SESAME.NIL.equals(resource);
 	}
 
 	@Override
@@ -323,11 +370,12 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 			setBindings(tupleQuery, subj, pred, obj, contexts);
 			tupleQuery.setIncludeInferred(includeInferred);
 			qRes = tupleQuery.evaluate();
-			result = new RepositoryResult<>(new ExceptionConvertingIteration<Statement, RepositoryException>(
-					toStatementIteration(qRes, subj, pred, obj)) {
+
+			result = new RepositoryResult<>(new ExceptionConvertingIteration<>(
+					new BindingSetStatementConvertingIteration(qRes, subj, pred, obj)) {
 
 				@Override
-				protected RepositoryException convert(Exception e) {
+				protected RepositoryException convert(RuntimeException e) {
 					return new RepositoryException(e);
 				}
 			});
@@ -335,14 +383,8 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 			return result;
 		} finally {
 			if (!allGood) {
-				try {
-					if (result != null) {
-						result.close();
-					}
-				} finally {
-					if (qRes != null) {
-						qRes.close();
-					}
+				if (qRes != null) {
+					qRes.close();
 				}
 			}
 		}
@@ -352,7 +394,7 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 			boolean includeInferred, Resource... contexts) throws RepositoryException {
 		if (hasStatement(subj, pred, obj, includeInferred, contexts)) {
 			Statement st = getValueFactory().createStatement(subj, pred, obj);
-			CloseableIteration<Statement, RepositoryException> cursor;
+			CloseableIteration<Statement> cursor;
 			cursor = new SingletonIteration<>(st);
 			return new RepositoryResult<>(cursor);
 		} else {
@@ -372,10 +414,9 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 			setBindings(query, subj, pred, obj, contexts);
 			gRes = query.evaluate();
 			result = new RepositoryResult<>(
-					new ExceptionConvertingIteration<Statement, RepositoryException>(gRes) {
-
+					new ExceptionConvertingIteration<>(gRes) {
 						@Override
-						protected RepositoryException convert(Exception e) {
+						protected RepositoryException convert(RuntimeException e) {
 							return new RepositoryException(e);
 						}
 					});
@@ -383,14 +424,8 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 			return result;
 		} finally {
 			if (!allGood) {
-				try {
-					if (result != null) {
-						result.close();
-					}
-				} finally {
-					if (gRes != null) {
-						gRes.close();
-					}
+				if (gRes != null) {
+					gRes.close();
 				}
 			}
 		}
@@ -538,9 +573,6 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 
 			// RDFInserter only throws wrapped RepositoryExceptions
 			throw (RepositoryException) e.getCause();
-		} catch (RDFParseException e) {
-			conditionalRollback(localTransaction);
-			throw e;
 		} catch (IOException | RuntimeException e) {
 			conditionalRollback(localTransaction);
 			throw e;
@@ -568,9 +600,6 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 
 			// RDFInserter only throws wrapped RepositoryExceptions
 			throw (RepositoryException) e.getCause();
-		} catch (RDFParseException e) {
-			conditionalRollback(localTransaction);
-			throw e;
 		} catch (IOException | RuntimeException e) {
 			conditionalRollback(localTransaction);
 			throw e;
@@ -599,9 +628,6 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 
 			// RDFInserter only throws wrapped RepositoryExceptions
 			throw (RepositoryException) e.getCause();
-		} catch (RDFParseException e) {
-			conditionalRollback(localTransaction);
-			throw e;
 		} catch (IOException | RuntimeException e) {
 			conditionalRollback(localTransaction);
 			throw e;
@@ -631,9 +657,6 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 
 			// RDFInserter only throws wrapped RepositoryExceptions
 			throw (RepositoryException) e.getCause();
-		} catch (RDFParseException e) {
-			conditionalRollback(localTransaction);
-			throw e;
 		} catch (IOException | RuntimeException e) {
 			conditionalRollback(localTransaction);
 			throw e;
@@ -678,15 +701,15 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 		}
 
 		if (contexts.length == 0) {
-			sparqlTransaction.append(clearMode + " ALL ");
+			sparqlTransaction.append(clearMode).append(" ALL ");
 			sparqlTransaction.append("; ");
 		} else {
 			for (Resource context : contexts) {
 				if (context == null) {
-					sparqlTransaction.append(clearMode + " DEFAULT ");
+					sparqlTransaction.append(clearMode).append(" DEFAULT ");
 					sparqlTransaction.append("; ");
 				} else if (context instanceof IRI) {
-					sparqlTransaction.append(clearMode + " GRAPH <" + context.stringValue() + "> ");
+					sparqlTransaction.append(clearMode).append(" GRAPH <").append(context.stringValue()).append("> ");
 					sparqlTransaction.append("; ");
 				} else {
 					throw new RepositoryException("SPARQL does not support named graphs identified by blank nodes.");
@@ -798,7 +821,7 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 						// the blank node id.
 						namedGraph = "urn:nodeid:" + context.stringValue();
 					}
-					qb.append("    GRAPH <" + namedGraph + "> { \n");
+					qb.append("    GRAPH <").append(namedGraph).append("> { \n");
 				}
 				createDataBody(qb, statements, true);
 				if (context != null) {
@@ -827,7 +850,7 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 						// the blank node id.
 						namedGraph = "urn:nodeid:" + context.stringValue();
 					}
-					qb.append("    GRAPH <" + namedGraph + "> { \n");
+					qb.append("    GRAPH <").append(namedGraph).append("> { \n");
 				}
 				createDataBody(qb, statements, true);
 				if (context != null) {
@@ -854,16 +877,16 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 						// the blank node id.
 						namedGraph = "urn:nodeid:" + context.stringValue();
 					}
-					qb.append("    GRAPH <" + namedGraph + "> { \n");
+					qb.append("    GRAPH <").append(namedGraph).append("> { \n");
 				}
 			}
 			if (st.getSubject() instanceof BNode) {
-				qb.append("_:" + st.getSubject().stringValue() + " ");
+				qb.append("_:").append(st.getSubject().stringValue()).append(" ");
 			} else {
-				qb.append("<" + st.getSubject().stringValue() + "> ");
+				qb.append("<").append(st.getSubject().stringValue()).append("> ");
 			}
 
-			qb.append("<" + st.getPredicate().stringValue() + "> ");
+			qb.append("<").append(st.getPredicate().stringValue()).append("> ");
 
 			if (st.getObject() instanceof Literal) {
 				Literal lit = (Literal) st.getObject();
@@ -875,13 +898,13 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 					qb.append("@");
 					qb.append(lit.getLanguage().get());
 				} else {
-					qb.append("^^<" + lit.getDatatype().stringValue() + ">");
+					qb.append("^^<").append(lit.getDatatype().stringValue()).append(">");
 				}
 				qb.append(" ");
 			} else if (st.getObject() instanceof BNode) {
-				qb.append("_:" + st.getObject().stringValue() + " ");
+				qb.append("_:").append(st.getObject().stringValue()).append(" ");
 			} else {
-				qb.append("<" + st.getObject().stringValue() + "> ");
+				qb.append("<").append(st.getObject().stringValue()).append("> ");
 			}
 			qb.append(". \n");
 
@@ -992,10 +1015,10 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 						// the blank node id.
 						namedGraph = "urn:nodeid:" + context.stringValue();
 					}
-					qb.append("    GRAPH <" + namedGraph + "> { \n");
+					qb.append("    GRAPH <").append(namedGraph).append("> { \n");
 				}
 				createBGP(qb, subject, predicate, object);
-				if (context != null && context instanceof IRI) {
+				if (context instanceof IRI) {
 					qb.append(" } \n");
 				}
 			}
@@ -1010,16 +1033,16 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 	private void createBGP(StringBuilder qb, Resource subject, IRI predicate, Value object) {
 		if (subject != null) {
 			if (subject instanceof BNode) {
-				qb.append("_:" + subject.stringValue() + " ");
+				qb.append("_:").append(subject.stringValue()).append(" ");
 			} else {
-				qb.append("<" + subject.stringValue() + "> ");
+				qb.append("<").append(subject.stringValue()).append("> ");
 			}
 		} else {
 			qb.append("?subj");
 		}
 
 		if (predicate != null) {
-			qb.append("<" + predicate.stringValue() + "> ");
+			qb.append("<").append(predicate.stringValue()).append("> ");
 		} else {
 			qb.append("?pred");
 		}
@@ -1035,13 +1058,13 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 					qb.append("@");
 					qb.append(lit.getLanguage().get());
 				} else {
-					qb.append("^^<" + lit.getDatatype().stringValue() + ">");
+					qb.append("^^<").append(lit.getDatatype().stringValue()).append(">");
 				}
 				qb.append(" ");
 			} else if (object instanceof BNode) {
-				qb.append("_:" + object.stringValue() + " ");
+				qb.append("_:").append(object.stringValue()).append(" ");
 			} else {
-				qb.append("<" + object.stringValue() + "> ");
+				qb.append("<").append(object.stringValue()).append("> ");
 			}
 		} else {
 			qb.append("?obj");
@@ -1063,37 +1086,33 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 		return silentClear;
 	}
 
-	/**
-	 * Converts a {@link TupleQueryResult} resulting from the {@link #EVERYTHING_WITH_GRAPH} to a statement by using the
-	 * respective values from the {@link BindingSet} or (if provided) the ones from the arguments.
-	 *
-	 * @param iter the {@link TupleQueryResult}
-	 * @param subj the subject {@link Resource} used as input or <code>null</code> if wildcard was used
-	 * @param pred the predicate {@link IRI} used as input or <code>null</code> if wildcard was used
-	 * @param obj  the object {@link Value} used as input or <code>null</code> if wildcard was used
-	 * @return the converted iteration
-	 */
-	protected Iteration<Statement, QueryEvaluationException> toStatementIteration(TupleQueryResult iter,
-			final Resource subj, final IRI pred, final Value obj) {
-
-		return new ConvertingIteration<BindingSet, Statement, QueryEvaluationException>(iter) {
-
-			@Override
-			protected Statement convert(BindingSet b) throws QueryEvaluationException {
-
-				Resource s = subj == null ? (Resource) b.getValue("s") : subj;
-				IRI p = pred == null ? (IRI) b.getValue("p") : pred;
-				Value o = obj == null ? b.getValue("o") : obj;
-				Resource ctx = (Resource) b.getValue("ctx");
-
-				return SimpleValueFactory.getInstance().createStatement(s, p, o, ctx);
-			}
-
-		};
-	}
-
 	private ModelFactory getModelFactory() {
 		return modelFactory;
 	}
 
+	private static class BindingSetStatementConvertingIteration extends ConvertingIteration<BindingSet, Statement> {
+
+		private final Resource subj;
+		private final IRI pred;
+		private final Value obj;
+
+		public BindingSetStatementConvertingIteration(TupleQueryResult qRes, Resource subj, IRI pred, Value obj) {
+			super(qRes);
+			this.subj = subj;
+			this.pred = pred;
+			this.obj = obj;
+		}
+
+		@Override
+		protected Statement convert(BindingSet b) throws QueryEvaluationException {
+
+			Resource s = subj == null ? (Resource) b.getValue("s") : subj;
+			IRI p = pred == null ? (IRI) b.getValue("p") : pred;
+			Value o = obj == null ? b.getValue("o") : obj;
+			Resource ctx = (Resource) b.getValue("ctx");
+
+			return SimpleValueFactory.getInstance().createStatement(s, p, o, ctx);
+		}
+
+	}
 }

@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.testsuite.rio.ntriples;
 
@@ -39,13 +42,13 @@ public abstract class AbstractNTriplesParserTest {
 	/**
 	 * Base directory for W3C N-Triples tests
 	 */
-	private static String TEST_W3C_FILE_BASE_PATH = "/testcases/ntriples/";
+	private static final String TEST_W3C_FILE_BASE_PATH = "/testcases/ntriples/";
 
-	private static String TEST_W3C_MANIFEST_URL = TEST_W3C_FILE_BASE_PATH + "manifest.ttl";
+	private static final String TEST_W3C_MANIFEST_URL = TEST_W3C_FILE_BASE_PATH + "manifest.ttl";
 
-	private static String TEST_W3C_MANIFEST_URI_BASE = "http://www.w3.org/2013/N-TriplesTests/manifest.ttl#";
+	private static final String TEST_W3C_MANIFEST_URI_BASE = "http://www.w3.org/2013/N-TriplesTests/manifest.ttl#";
 
-	private static String TEST_W3C_TEST_URI_BASE = "http://www.w3.org/2013/N-TriplesTests/";
+	private static final String TEST_W3C_TEST_URI_BASE = "http://www.w3.org/2013/N-TriplesTests/";
 
 	/*---------*
 	 * Methods *
@@ -70,7 +73,7 @@ public abstract class AbstractNTriplesParserTest {
 	}
 
 	private void parsePositiveNTriplesSyntaxTests(TestSuite suite, String fileBasePath, String testLocationBaseUri,
-			RepositoryConnection con) throws Exception {
+			RepositoryConnection con) {
 		StringBuilder positiveQuery = new StringBuilder();
 		positiveQuery.append(" PREFIX mf:   <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#>\n");
 		positiveQuery.append(" PREFIX qt:   <http://www.w3.org/2001/sw/DataAccess/tests/test-query#>\n");
@@ -103,7 +106,7 @@ public abstract class AbstractNTriplesParserTest {
 	}
 
 	private void parseNegativeNTriplesSyntaxTests(TestSuite suite, String fileBasePath, String testLocationBaseUri,
-			RepositoryConnection con) throws Exception {
+			RepositoryConnection con) {
 		StringBuilder negativeQuery = new StringBuilder();
 		negativeQuery.append(" PREFIX mf:   <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#>\n");
 		negativeQuery.append(" PREFIX qt:   <http://www.w3.org/2001/sw/DataAccess/tests/test-query#>\n");

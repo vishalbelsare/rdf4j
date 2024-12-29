@@ -1,11 +1,16 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.testsuite.sail;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Random;
 
@@ -16,11 +21,11 @@ import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.sail.Sail;
 import org.eclipse.rdf4j.sail.SailConnection;
 import org.eclipse.rdf4j.sail.SailException;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests thread interrupts on a Sail implementation.
@@ -29,17 +34,22 @@ import org.junit.Test;
  */
 public abstract class SailInterruptTest {
 
-	@BeforeClass
-	public static void setUpClass() throws Exception {
+	@BeforeAll
+	public static void setUpClass() {
 		System.setProperty("org.eclipse.rdf4j.repository.debug", "true");
+	}
+
+	@AfterAll
+	public static void afterClass() throws Exception {
+		System.setProperty("org.eclipse.rdf4j.repository.debug", "false");
 	}
 
 	private Sail store;
 
 	private ValueFactory vf;
 
-	@Before
-	public void setUp() throws Exception {
+	@BeforeEach
+	public void setUp() {
 		store = createSail();
 		store.init();
 		vf = store.getValueFactory();
@@ -47,8 +57,8 @@ public abstract class SailInterruptTest {
 
 	protected abstract Sail createSail() throws SailException;
 
-	@After
-	public void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() {
 		store.shutDown();
 	}
 
@@ -65,7 +75,7 @@ public abstract class SailInterruptTest {
 			con.commit();
 		} catch (Exception e) {
 			con.rollback();
-			Assert.fail(e.getMessage());
+			fail(e.getMessage());
 		} finally {
 			con.close();
 		}
@@ -108,7 +118,7 @@ public abstract class SailInterruptTest {
 
 	private void iterateStatements() throws SailException {
 		try (SailConnection con = store.getConnection();
-				CloseableIteration<?, SailException> iter = con.getStatements(null, null, null, true);) {
+				CloseableIteration<?> iter = con.getStatements(null, null, null, true)) {
 			while (iter.hasNext()) {
 				iter.next();
 			}

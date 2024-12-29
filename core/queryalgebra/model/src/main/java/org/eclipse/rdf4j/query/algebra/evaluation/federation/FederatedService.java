@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra.evaluation.federation;
 
@@ -60,7 +63,7 @@ public interface FederatedService {
 	 * @return an iteration over the results of the query
 	 * @throws QueryEvaluationException If there was an exception generated while evaluating the query.
 	 */
-	CloseableIteration<BindingSet, QueryEvaluationException> select(Service service, Set<String> projectionVars,
+	CloseableIteration<BindingSet> select(Service service, Set<String> projectionVars,
 			BindingSet bindings, String baseUri) throws QueryEvaluationException;
 
 	/**
@@ -83,8 +86,8 @@ public interface FederatedService {
 	 *         inserted into the results!
 	 * @throws QueryEvaluationException If there was an exception generated while evaluating the query.
 	 */
-	CloseableIteration<BindingSet, QueryEvaluationException> evaluate(Service service,
-			CloseableIteration<BindingSet, QueryEvaluationException> bindings, String baseUri)
+	CloseableIteration<BindingSet> evaluate(Service service,
+			CloseableIteration<BindingSet> bindings, String baseUri)
 			throws QueryEvaluationException;
 
 	/**

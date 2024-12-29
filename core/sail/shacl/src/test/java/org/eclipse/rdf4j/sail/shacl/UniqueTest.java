@@ -1,14 +1,15 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl;
-
-import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,6 +21,7 @@ import org.eclipse.rdf4j.sail.shacl.ast.planNodes.Unique;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.ValidationTuple;
 import org.eclipse.rdf4j.sail.shacl.mock.MockConsumePlanNode;
 import org.eclipse.rdf4j.sail.shacl.mock.MockInputPlanNode;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class UniqueTest {
@@ -80,16 +82,16 @@ public class UniqueTest {
 				Arrays.asList("a", "a", "2")
 		);
 
-		PlanNode unique = Unique.getInstance(input, true);
+		PlanNode unique = Unique.getInstance(input, true, null);
 
 		List<ValidationTuple> tuples = new MockConsumePlanNode(unique).asList();
 
-		assertEquals(2, tuples.size());
+		Assertions.assertEquals(2, tuples.size());
 
 	}
 
 	private void runTest(MockInputPlanNode input, boolean compress) {
-		PlanNode unique = Unique.getInstance(input, compress);
+		PlanNode unique = Unique.getInstance(input, compress, null);
 
 		List<ValidationTuple> tuples = new MockConsumePlanNode(unique).asList();
 
@@ -101,7 +103,7 @@ public class UniqueTest {
 		tuples.sort(ValidationTuple::compareFullTarget);
 		expected.sort(ValidationTuple::compareFullTarget);
 
-		assertEquals(expected, tuples);
+		Assertions.assertEquals(expected, tuples);
 	}
 
 }

@@ -1,15 +1,17 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra.evaluation.impl.evaluationsteps;
 
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.common.iteration.ConvertingIteration;
-import org.eclipse.rdf4j.common.iteration.EmptyIteration;
 import org.eclipse.rdf4j.common.iteration.FilterIteration;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
@@ -43,7 +45,7 @@ public class RdfStarQueryEvaluationStep implements QueryEvaluationStep {
 	}
 
 	@Override
-	public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(BindingSet bindings) {
+	public CloseableIteration<BindingSet> evaluate(BindingSet bindings) {
 		final Value subjValue = StrictEvaluationStrategy.getVarValue(subjVar, bindings);
 		final Value predValue = StrictEvaluationStrategy.getVarValue(predVar, bindings);
 		final Value objValue = StrictEvaluationStrategy.getVarValue(objVar, bindings);
@@ -63,14 +65,14 @@ public class RdfStarQueryEvaluationStep implements QueryEvaluationStep {
 		// the evaluation of the TripleRef should be suitably forwarded down the sail and filter/construct
 		// the correct solution out of the results of that call
 		if (extValue != null && !(extValue instanceof Resource)) {
-			return new EmptyIteration<>();
+			return EMPTY_ITERATION;
 		}
 
 		// in case the
-		CloseableIteration<? extends Triple, QueryEvaluationException> sourceIter = tripleSource
+		CloseableIteration<? extends Triple> sourceIter = tripleSource
 				.getRdfStarTriples((Resource) subjValue, (IRI) predValue, objValue);
 
-		FilterIteration<Triple, QueryEvaluationException> filterIter = new FilterIteration<Triple, QueryEvaluationException>(
+		FilterIteration<Triple> filterIter = new FilterIteration<>(
 				sourceIter) {
 			@Override
 			protected boolean accept(Triple triple) throws QueryEvaluationException {
@@ -88,9 +90,14 @@ public class RdfStarQueryEvaluationStep implements QueryEvaluationStep {
 				}
 				return true;
 			}
+
+			@Override
+			protected void handleClose() {
+
+			}
 		};
 
-		return new ConvertingIteration<Triple, BindingSet, QueryEvaluationException>(filterIter) {
+		return new ConvertingIteration<>(filterIter) {
 			@Override
 			protected BindingSet convert(Triple triple) throws QueryEvaluationException {
 				MutableBindingSet result = context.createBindingSet(bindings);

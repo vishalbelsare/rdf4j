@@ -1,25 +1,28 @@
 /*******************************************************************************
  * Copyright (c) 2017 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.common.net;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
-import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author Joseph Walton
@@ -55,9 +58,9 @@ public class ParsedIRITest {
 		}
 	}
 
-	@Test(expected = URISyntaxException.class)
-	public void testIncorrectIPv4() throws URISyntaxException {
-		ParsedIRI iri = new ParsedIRI("http://127.0.0.256/");
+	@Test
+	public void testIncorrectIPv4() {
+		assertThrows(URISyntaxException.class, () -> new ParsedIRI("http://127.0.0.256/"));
 	}
 
 	@Test
@@ -69,9 +72,9 @@ public class ParsedIRITest {
 		assertThat(uri.getHost()).isEqualTo("385.fwk19480900");
 	}
 
-	@Test(expected = URISyntaxException.class)
-	public void testHttpSchemeHostProcessing() throws URISyntaxException {
-		ParsedIRI uri = new ParsedIRI("http://385.fwk19480900/test.ttl");
+	@Test
+	public void testHttpSchemeHostProcessing() {
+		assertThrows(URISyntaxException.class, () -> new ParsedIRI("http://385.fwk19480900/test.ttl"));
 	}
 
 	@Test
@@ -467,7 +470,7 @@ public class ParsedIRITest {
 	}
 
 	@Test
-	public void testIllegalInPath() throws Exception {
+	public void testIllegalInPath() {
 		for (char g : ILLEGAL.toCharArray()) {
 			try {
 				new ParsedIRI(BASE + g);
@@ -495,7 +498,7 @@ public class ParsedIRITest {
 	}
 
 	@Test
-	public void testIllegalInQuery() throws Exception {
+	public void testIllegalInQuery() {
 		for (char g : ILLEGAL.toCharArray()) {
 			try {
 				new ParsedIRI(QUERY + g);
@@ -523,7 +526,7 @@ public class ParsedIRITest {
 	}
 
 	@Test
-	public void testIllegalInFragment() throws Exception {
+	public void testIllegalInFragment() {
 		for (char g : ILLEGAL.toCharArray()) {
 			try {
 				new ParsedIRI(FRAGMENT + g);
@@ -534,7 +537,7 @@ public class ParsedIRITest {
 		}
 	}
 
-	private String encode(Character chr) throws UnsupportedEncodingException {
+	private String encode(Character chr) {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		byte[] source = Character.toString(chr).getBytes(StandardCharsets.UTF_8);
 		for (byte c : source) {

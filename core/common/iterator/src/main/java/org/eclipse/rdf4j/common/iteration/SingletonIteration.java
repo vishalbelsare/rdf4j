@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.common.iteration;
@@ -13,17 +16,9 @@ import java.util.NoSuchElementException;
 /**
  * An Iteration that contains exactly one element.
  */
-public class SingletonIteration<E, X extends Exception> extends AbstractCloseableIteration<E, X> {
-
-	/*-----------*
-	 * Variables *
-	 *-----------*/
+public class SingletonIteration<E> extends AbstractCloseableIteration<E> {
 
 	private E value;
-
-	/*--------------*
-	 * Constructors *
-	 *--------------*/
 
 	/**
 	 * Creates a new EmptyIteration.
@@ -32,17 +27,13 @@ public class SingletonIteration<E, X extends Exception> extends AbstractCloseabl
 		this.value = value;
 	}
 
-	/*---------*
-	 * Methods *
-	 *---------*/
-
 	@Override
 	public boolean hasNext() {
 		return value != null;
 	}
 
 	@Override
-	public E next() throws X {
+	public E next() {
 		E result = value;
 		value = null;
 		if (result == null) {
@@ -58,7 +49,7 @@ public class SingletonIteration<E, X extends Exception> extends AbstractCloseabl
 	}
 
 	@Override
-	protected void handleClose() throws X {
+	protected void handleClose() {
 		value = null;
 	}
 }

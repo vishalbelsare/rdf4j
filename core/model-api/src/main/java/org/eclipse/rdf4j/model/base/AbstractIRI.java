@@ -1,10 +1,13 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
- ******************************************************************************/
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 
 package org.eclipse.rdf4j.model.base;
 
@@ -14,10 +17,9 @@ import org.eclipse.rdf4j.model.IRI;
  * Base class for {@link IRI}, offering common functionality.
  *
  * @author Alessandro Bollini
- * @since 3.5.0
- *
  * @implNote Wherever feasible, in order to avoid severe performance degradation of the {@link #equals(Object)} method,
  *           concrete subclasses should override {@link #stringValue()} to provide a constant pre-computed value
+ * @since 3.5.0
  */
 public abstract class AbstractIRI implements IRI {
 
@@ -30,8 +32,9 @@ public abstract class AbstractIRI implements IRI {
 
 	@Override
 	public boolean equals(Object o) {
-		if (this == o)
+		if (this == o) {
 			return true;
+		}
 		if (o != null) {
 			if (o instanceof AbstractIRI) {
 				return stringValue().equals(o.toString());
@@ -42,9 +45,23 @@ public abstract class AbstractIRI implements IRI {
 		return false;
 	}
 
+	private int cachedHashCode = 0;
+
 	@Override
 	public int hashCode() {
-		return stringValue().hashCode();
+		int cached = cachedHashCode;
+		if (cached == 0) {
+			synchronized (this) {
+				cached = cachedHashCode;
+				if (cached == 0) {
+					cached = stringValue().hashCode();
+					cachedHashCode = cached;
+				}
+			}
+			cached = stringValue().hashCode();
+			cachedHashCode = cached;
+		}
+		return cached;
 	}
 
 	@Override
@@ -56,7 +73,7 @@ public abstract class AbstractIRI implements IRI {
 
 		private static final long serialVersionUID = 2209156550690548467L;
 
-		private String iri;
+		private final String iri;
 
 		private int split;
 

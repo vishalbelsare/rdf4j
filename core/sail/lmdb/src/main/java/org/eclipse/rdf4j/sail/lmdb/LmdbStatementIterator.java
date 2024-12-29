@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.lmdb;
 
@@ -20,7 +23,7 @@ import org.eclipse.rdf4j.sail.SailException;
  * A statement iterator that wraps a RecordIterator containing statement records and translates these records to
  * {@link Statement} objects.
  */
-class LmdbStatementIterator extends LookAheadIteration<Statement, SailException> {
+class LmdbStatementIterator extends LookAheadIteration<Statement> {
 
 	/*-----------*
 	 * Variables *
@@ -37,7 +40,7 @@ class LmdbStatementIterator extends LookAheadIteration<Statement, SailException>
 	/**
 	 * Creates a new LmdbStatementIterator.
 	 */
-	public LmdbStatementIterator(RecordIterator recordIt, ValueStore valueStore) throws IOException {
+	public LmdbStatementIterator(RecordIterator recordIt, ValueStore valueStore) {
 		this.recordIt = recordIt;
 		this.valueStore = valueStore;
 	}
@@ -77,18 +80,10 @@ class LmdbStatementIterator extends LookAheadIteration<Statement, SailException>
 
 	@Override
 	protected void handleClose() throws SailException {
-		try {
-			super.handleClose();
-		} finally {
-			try {
-				recordIt.close();
-			} catch (IOException e) {
-				throw causeIOException(e);
-			}
-		}
+		recordIt.close();
 	}
 
-	protected SailException causeIOException(IOException e) {
+	private SailException causeIOException(IOException e) {
 		return new SailException(e);
 	}
 }

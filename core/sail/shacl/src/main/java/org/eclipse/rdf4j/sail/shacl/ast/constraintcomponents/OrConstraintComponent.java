@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl.ast.constraintcomponents;
@@ -14,10 +17,11 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
-import org.eclipse.rdf4j.sail.shacl.ShaclSail;
 import org.eclipse.rdf4j.sail.shacl.SourceConstraintComponent;
 import org.eclipse.rdf4j.sail.shacl.ValidationSettings;
 import org.eclipse.rdf4j.sail.shacl.ast.Cache;
@@ -29,6 +33,7 @@ import org.eclipse.rdf4j.sail.shacl.ast.ShaclUnsupportedException;
 import org.eclipse.rdf4j.sail.shacl.ast.Shape;
 import org.eclipse.rdf4j.sail.shacl.ast.SparqlFragment;
 import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher;
+import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher.Variable;
 import org.eclipse.rdf4j.sail.shacl.ast.ValidationQuery;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.BufferedSplitter;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.EmptyNode;
@@ -46,17 +51,16 @@ import org.eclipse.rdf4j.sail.shacl.wrapper.shape.ShapeSource;
 public class OrConstraintComponent extends LogicalOperatorConstraintComponent {
 	List<Shape> or;
 
-	public OrConstraintComponent(Resource id, ShapeSource shapeSource,
-			Cache cache, ShaclSail shaclSail) {
+	public OrConstraintComponent(Resource id, ShapeSource shapeSource, Shape.ParseSettings parseSettings, Cache cache) {
 		super(id);
 		or = ShaclAstLists.toList(shapeSource, id, Resource.class)
 				.stream()
 				.map(r -> new ShaclProperties(r, shapeSource))
 				.map(p -> {
 					if (p.getType() == SHACL.NODE_SHAPE) {
-						return NodeShape.getInstance(p, shapeSource, cache, shaclSail);
+						return NodeShape.getInstance(p, shapeSource, parseSettings, cache);
 					} else if (p.getType() == SHACL.PROPERTY_SHAPE) {
-						return PropertyShape.getInstance(p, shapeSource, cache, shaclSail);
+						return PropertyShape.getInstance(p, shapeSource, parseSettings, cache);
 					}
 					throw new IllegalStateException("Unknown shape type for " + p.getId());
 				})
@@ -115,9 +119,10 @@ public class OrConstraintComponent extends LogicalOperatorConstraintComponent {
 		if (overrideTargetNode != null) {
 			planNodeProvider = overrideTargetNode;
 		} else {
-			planNodeProvider = new BufferedSplitter(
+			planNodeProvider = BufferedSplitter.getInstance(
 					getAllTargetsPlan(connectionsGroup, validationSettings.getDataGraph(), scope,
-							stableRandomVariableProvider));
+							stableRandomVariableProvider, validationSettings),
+					false);
 		}
 
 		PlanNode orPlanNodes = or.stream()
@@ -128,15 +133,16 @@ public class OrConstraintComponent extends LogicalOperatorConstraintComponent {
 						scope
 				)
 				)
-				.reduce((a, b) -> new EqualsJoinValue(a, b, false))
+				.reduce((a, b) -> new EqualsJoinValue(a, b, false, connectionsGroup))
 				.orElse(EmptyNode.getInstance());
 
-		return Unique.getInstance(orPlanNodes, false);
+		return Unique.getInstance(orPlanNodes, false, connectionsGroup);
 	}
 
 	@Override
 	public PlanNode getAllTargetsPlan(ConnectionsGroup connectionsGroup, Resource[] dataGraph, Scope scope,
-			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
+			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider,
+			ValidationSettings validationSettings) {
 		PlanNode allTargets;
 
 		if (scope == Scope.propertyShape) {
@@ -145,7 +151,8 @@ public class OrConstraintComponent extends LogicalOperatorConstraintComponent {
 							stableRandomVariableProvider)
 					.getPlanNode(connectionsGroup, dataGraph, Scope.nodeShape, true, null);
 
-			allTargets = Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan), true);
+			allTargets = Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan, connectionsGroup), true,
+					connectionsGroup);
 		} else {
 			allTargets = getTargetChain()
 					.getEffectiveTarget(scope, connectionsGroup.getRdfsSubClassOfReasoner(),
@@ -156,12 +163,13 @@ public class OrConstraintComponent extends LogicalOperatorConstraintComponent {
 
 		PlanNode planNode = or.stream()
 				.map(or -> or.getAllTargetsPlan(connectionsGroup, dataGraph, scope,
-						new StatementMatcher.StableRandomVariableProvider()))
+						new StatementMatcher.StableRandomVariableProvider(), validationSettings))
 				.distinct()
-				.reduce(UnionNode::getInstanceDedupe)
+				.reduce((nodes, nodes2) -> UnionNode.getInstanceDedupe(connectionsGroup, nodes, nodes2))
 				.orElse(EmptyNode.getInstance());
 
-		return Unique.getInstance(UnionNode.getInstanceDedupe(allTargets, planNode), false);
+		return Unique.getInstance(UnionNode.getInstanceDedupe(connectionsGroup, allTargets, planNode), false,
+				connectionsGroup);
 	}
 
 	@Override
@@ -178,13 +186,17 @@ public class OrConstraintComponent extends LogicalOperatorConstraintComponent {
 	@Override
 	public boolean requiresEvaluation(ConnectionsGroup connectionsGroup, Scope scope, Resource[] dataGraph,
 			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
-		return or.stream()
-				.anyMatch(c -> c.requiresEvaluation(connectionsGroup, scope, dataGraph, stableRandomVariableProvider));
+		for (Shape c : or) {
+			if (c.requiresEvaluation(connectionsGroup, scope, dataGraph, stableRandomVariableProvider)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	@Override
-	public SparqlFragment buildSparqlValidNodes_rsx_targetShape(StatementMatcher.Variable subject,
-			StatementMatcher.Variable object,
+	public SparqlFragment buildSparqlValidNodes_rsx_targetShape(Variable<Value> subject,
+			Variable<Value> object,
 			RdfsSubClassOfReasoner rdfsSubClassOfReasoner, Scope scope,
 			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
 
@@ -195,4 +207,27 @@ public class OrConstraintComponent extends LogicalOperatorConstraintComponent {
 
 	}
 
+	@Override
+	public List<Literal> getDefaultMessage() {
+		return List.of();
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+
+		OrConstraintComponent that = (OrConstraintComponent) o;
+
+		return or.equals(that.or);
+	}
+
+	@Override
+	public int hashCode() {
+		return or.hashCode() + "OrConstraintComponent".hashCode();
+	}
 }

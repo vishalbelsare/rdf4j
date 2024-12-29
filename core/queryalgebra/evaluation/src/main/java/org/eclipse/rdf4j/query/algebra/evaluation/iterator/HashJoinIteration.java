@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra.evaluation.iterator;
 
@@ -11,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -29,8 +31,6 @@ import org.eclipse.rdf4j.query.MutableBindingSet;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.algebra.Join;
 import org.eclipse.rdf4j.query.algebra.LeftJoin;
-import org.eclipse.rdf4j.query.algebra.TupleExpr;
-import org.eclipse.rdf4j.query.algebra.evaluation.EvaluationStrategy;
 import org.eclipse.rdf4j.query.algebra.evaluation.QueryBindingSet;
 import org.eclipse.rdf4j.query.algebra.evaluation.QueryEvaluationStep;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.QueryEvaluationContext;
@@ -41,18 +41,15 @@ import org.eclipse.rdf4j.query.impl.EmptyBindingSet;
  *
  * @author MJAHale
  */
-public class HashJoinIteration extends LookAheadIteration<BindingSet, QueryEvaluationException> {
-
-	/*-----------*
-	 * Variables *
-	 *-----------*/
+public class HashJoinIteration extends LookAheadIteration<BindingSet> {
 
 	protected final String[] joinAttributes;
-	private final CloseableIteration<BindingSet, QueryEvaluationException> leftIter;
-	private final CloseableIteration<BindingSet, QueryEvaluationException> rightIter;
+	private final CloseableIteration<BindingSet> leftIter;
+	private final CloseableIteration<BindingSet> rightIter;
 	private final boolean leftJoin;
+
 	private Iterator<BindingSet> scanList;
-	private CloseableIteration<BindingSet, QueryEvaluationException> restIter;
+	private CloseableIteration<BindingSet> restIter;
 	private Map<BindingSetHashKey, List<BindingSet>> hashTable;
 	private BindingSet currentScanElem;
 	private Iterator<BindingSet> hashTableValues;
@@ -65,26 +62,6 @@ public class HashJoinIteration extends LookAheadIteration<BindingSet, QueryEvalu
 	/*--------------*
 	 * Constructors *
 	 *--------------*/
-
-	@Deprecated(forRemoval = true)
-	public HashJoinIteration(EvaluationStrategy strategy, Join join, BindingSet bindings)
-			throws QueryEvaluationException {
-		this(strategy, join.getLeftArg(), join.getRightArg(), bindings, false);
-		join.setAlgorithm(this);
-	}
-
-	@Deprecated(forRemoval = true)
-	public HashJoinIteration(EvaluationStrategy strategy, LeftJoin join, BindingSet bindings)
-			throws QueryEvaluationException {
-		this(strategy, join.getLeftArg(), join.getRightArg(), bindings, true);
-		join.setAlgorithm(this);
-	}
-
-	public HashJoinIteration(EvaluationStrategy strategy, TupleExpr left, TupleExpr right, BindingSet bindings,
-			boolean leftJoin) throws QueryEvaluationException {
-		this(strategy.evaluate(left, bindings), left.getBindingNames(), strategy.evaluate(right, bindings),
-				right.getBindingNames(), leftJoin);
-	}
 
 	public HashJoinIteration(QueryEvaluationStep left, QueryEvaluationStep right,
 			BindingSet bindings,
@@ -99,41 +76,20 @@ public class HashJoinIteration extends LookAheadIteration<BindingSet, QueryEvalu
 		this.bsMaker = context::createBindingSet;
 	}
 
+	@Deprecated(since = "5.0.0", forRemoval = true) // there are still some tests that use this constructor
 	public HashJoinIteration(
-			CloseableIteration<BindingSet, QueryEvaluationException> leftIter, Set<String> leftBindingNames,
-			CloseableIteration<BindingSet, QueryEvaluationException> rightIter, Set<String> rightBindingNames,
+			CloseableIteration<BindingSet> leftIter, Set<String> leftBindingNames,
+			CloseableIteration<BindingSet> rightIter, Set<String> rightBindingNames,
 			boolean leftJoin
 	) throws QueryEvaluationException {
 		this.leftIter = leftIter;
 		this.rightIter = rightIter;
 		this.mapMaker = this::makeHashTable;
 
-		Set<String> joinAttributeNames = leftBindingNames;
-		joinAttributeNames.retainAll(rightBindingNames);
-		joinAttributes = joinAttributeNames.toArray(new String[joinAttributeNames.size()]);
+		joinAttributes = leftBindingNames.stream().filter(rightBindingNames::contains).toArray(String[]::new);
 
 		this.leftJoin = leftJoin;
 		this.mapValueMaker = this::makeHashValue;
-		this.bsMaker = QueryBindingSet::new;
-	}
-
-	@Deprecated(forRemoval = true)
-	public HashJoinIteration(
-			CloseableIteration<BindingSet, QueryEvaluationException> leftIter, Set<String> leftBindingNames,
-			CloseableIteration<BindingSet, QueryEvaluationException> rightIter, Set<String> rightBindingNames,
-			boolean leftJoin, IntFunction<Map<BindingSetHashKey, List<BindingSet>>> mapMaker,
-			IntFunction<List<BindingSet>> mapValueMaker
-	) throws QueryEvaluationException {
-		this.leftIter = leftIter;
-		this.rightIter = rightIter;
-		this.mapMaker = mapMaker;
-
-		Set<String> joinAttributeNames = leftBindingNames;
-		joinAttributeNames.retainAll(rightBindingNames);
-		joinAttributes = joinAttributeNames.toArray(new String[joinAttributeNames.size()]);
-
-		this.leftJoin = leftJoin;
-		this.mapValueMaker = mapValueMaker;
 		this.bsMaker = QueryBindingSet::new;
 	}
 
@@ -222,37 +178,33 @@ public class HashJoinIteration extends LookAheadIteration<BindingSet, QueryEvalu
 	@Override
 	protected void handleClose() throws QueryEvaluationException {
 		try {
-			super.handleClose();
+			if (leftIter != null) {
+				leftIter.close();
+			}
 		} finally {
 			try {
-				if (leftIter != null) {
-					leftIter.close();
+				if (rightIter != null) {
+					rightIter.close();
 				}
 			} finally {
 				try {
-					if (rightIter != null) {
-						rightIter.close();
+					Iterator<BindingSet> toCloseHashTableValues = hashTableValues;
+					hashTableValues = null;
+					if (toCloseHashTableValues != null) {
+						closeHashValue(toCloseHashTableValues);
 					}
 				} finally {
 					try {
-						Iterator<BindingSet> toCloseHashTableValues = hashTableValues;
-						hashTableValues = null;
-						if (toCloseHashTableValues != null) {
-							closeHashValue(toCloseHashTableValues);
+						Iterator<BindingSet> toCloseScanList = scanList;
+						scanList = null;
+						if (toCloseScanList != null) {
+							disposeCache(toCloseScanList);
 						}
 					} finally {
-						try {
-							Iterator<BindingSet> toCloseScanList = scanList;
-							scanList = null;
-							if (toCloseScanList != null) {
-								disposeCache(toCloseScanList);
-							}
-						} finally {
-							Map<BindingSetHashKey, List<BindingSet>> toCloseHashTable = hashTable;
-							hashTable = null;
-							if (toCloseHashTable != null) {
-								disposeHashTable(toCloseHashTable);
-							}
+						Map<BindingSetHashKey, List<BindingSet>> toCloseHashTable = hashTable;
+						hashTable = null;
+						if (toCloseHashTable != null) {
+							disposeHashTable(toCloseHashTable);
 						}
 					}
 				}
@@ -279,7 +231,7 @@ public class HashJoinIteration extends LookAheadIteration<BindingSet, QueryEvalu
 			}
 		}
 
-		Collection<BindingSet> smallestResult = null;
+		Collection<BindingSet> smallestResult;
 
 		if (leftJoin || leftIter.hasNext()) { // leftArg is the greater relation
 			smallestResult = rightArgResults;
@@ -303,7 +255,7 @@ public class HashJoinIteration extends LookAheadIteration<BindingSet, QueryEvalu
 			BindingSetHashKey hashKey = BindingSetHashKey.create(joinAttributes, b);
 
 			List<BindingSet> hashValue = resultHashTable.get(hashKey);
-			boolean newEntry = (hashValue == null);
+			boolean newEntry = hashValue == null;
 			if (newEntry) {
 				hashValue = mapValueMaker.apply(maxListSize);
 			}
@@ -331,7 +283,7 @@ public class HashJoinIteration extends LookAheadIteration<BindingSet, QueryEvalu
 	 *
 	 * @return list
 	 */
-	protected Collection<BindingSet> makeIterationCache(CloseableIteration<BindingSet, QueryEvaluationException> iter) {
+	protected Collection<BindingSet> makeIterationCache(CloseableIteration<BindingSet> iter) {
 		return new ArrayList<>();
 	}
 
@@ -348,7 +300,7 @@ public class HashJoinIteration extends LookAheadIteration<BindingSet, QueryEvalu
 			// when we have more than one value per entry
 			nextHashTable = new HashMap<>(initialSize);
 		} else {
-			List<BindingSet> l = (initialSize > 0) ? new ArrayList<>(initialSize) : null;
+			List<BindingSet> l = initialSize > 0 ? new ArrayList<>(initialSize) : null;
 			nextHashTable = Collections.singletonMap(BindingSetHashKey.EMPTY, l);
 		}
 		return nextHashTable;
@@ -400,18 +352,12 @@ public class HashJoinIteration extends LookAheadIteration<BindingSet, QueryEvalu
 	public static String[] hashJoinAttributeNames(Join join) {
 		Set<String> leftBindingNames = join.getLeftArg().getBindingNames();
 		Set<String> rightBindingNames = join.getRightArg().getBindingNames();
-		Set<String> joinAttributeNames = new HashSet<>(leftBindingNames);
-		joinAttributeNames.retainAll(rightBindingNames);
-		String[] joinAttributes = joinAttributeNames.toArray(new String[0]);
-		return joinAttributes;
+		return leftBindingNames.stream().filter(rightBindingNames::contains).toArray(String[]::new);
 	}
 
 	public static String[] hashJoinAttributeNames(LeftJoin join) {
 		Set<String> leftBindingNames = join.getLeftArg().getBindingNames();
 		Set<String> rightBindingNames = join.getRightArg().getBindingNames();
-		Set<String> joinAttributeNames = new HashSet<>(leftBindingNames);
-		joinAttributeNames.retainAll(rightBindingNames);
-		String[] joinAttributes = joinAttributeNames.toArray(new String[0]);
-		return joinAttributes;
+		return leftBindingNames.stream().filter(rightBindingNames::contains).toArray(String[]::new);
 	}
 }

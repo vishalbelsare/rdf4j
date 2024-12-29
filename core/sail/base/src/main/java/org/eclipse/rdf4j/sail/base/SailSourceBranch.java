@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.base;
 
@@ -13,7 +16,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -25,7 +27,6 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.ModelFactory;
 import org.eclipse.rdf4j.model.Resource;
-import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.impl.DynamicModelFactory;
 import org.eclipse.rdf4j.sail.SailException;
@@ -466,22 +467,7 @@ class SailSourceBranch implements SailSource {
 	}
 
 	private void prepare(Changeset change, SailSink sink) throws SailException {
-		Set<Changeset.SimpleStatementPattern> observations = change.getObserved();
-		if (observations != null) {
-			for (Changeset.SimpleStatementPattern p : observations) {
-
-				Resource subj = p.getSubject();
-				IRI pred = p.getPredicate();
-				Value obj = p.getObject();
-				Resource context = p.getContext();
-				if (p.isAllContexts()) {
-					sink.observe(subj, pred, obj);
-				} else {
-					sink.observe(subj, pred, obj, context);
-				}
-
-			}
-		}
+		change.sinkObserved(sink);
 	}
 
 	private void flush(SailSink sink) throws SailException {
@@ -528,18 +514,9 @@ class SailSourceBranch implements SailSource {
 		if (deprecatedContexts != null && !deprecatedContexts.isEmpty()) {
 			sink.clear(deprecatedContexts.toArray(new Resource[0]));
 		}
-		List<Statement> deprecated = change.getDeprecatedStatements();
-		if (deprecated != null) {
-			for (Statement st : deprecated) {
-				sink.deprecate(st);
-			}
-		}
-		List<Statement> approved = change.getApprovedStatements();
-		if (approved != null) {
-			for (Statement st : approved) {
-				sink.approve(st);
-			}
-		}
+
+		change.sinkDeprecated(sink);
+		change.sinkApproved(sink);
 	}
 
 }

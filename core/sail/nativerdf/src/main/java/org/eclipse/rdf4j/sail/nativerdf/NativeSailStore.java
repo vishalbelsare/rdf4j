@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.nativerdf;
 
@@ -16,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -35,6 +39,7 @@ import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.EvaluationStatistics;
 import org.eclipse.rdf4j.sail.SailException;
 import org.eclipse.rdf4j.sail.base.BackingSailSource;
+import org.eclipse.rdf4j.sail.base.Changeset;
 import org.eclipse.rdf4j.sail.base.SailDataset;
 import org.eclipse.rdf4j.sail.base.SailSink;
 import org.eclipse.rdf4j.sail.base.SailSource;
@@ -175,9 +180,9 @@ class NativeSailStore implements SailStore {
 		return contextIDs;
 	}
 
-	CloseableIteration<Resource, SailException> getContexts() throws IOException {
+	CloseableIteration<Resource> getContexts() throws IOException {
 		RecordIterator btreeIter = tripleStore.getAllTriplesSortedByContext(false);
-		CloseableIteration<? extends Statement, SailException> stIter1;
+		CloseableIteration<? extends Statement> stIter1;
 		if (btreeIter == null) {
 			// Iterator over all statements
 			stIter1 = createStatementIterator(null, null, null, true);
@@ -185,15 +190,20 @@ class NativeSailStore implements SailStore {
 			stIter1 = new NativeStatementIterator(btreeIter, valueStore);
 		}
 
-		FilterIteration<Statement, SailException> stIter2 = new FilterIteration<Statement, SailException>(
+		FilterIteration<Statement> stIter2 = new FilterIteration<>(
 				stIter1) {
 			@Override
 			protected boolean accept(Statement st) {
 				return st.getContext() != null;
 			}
+
+			@Override
+			protected void handleClose() {
+
+			}
 		};
 
-		return new ConvertingIteration<Statement, Resource, SailException>(stIter2) {
+		return new ConvertingIteration<>(stIter2) {
 			@Override
 			protected Resource convert(Statement sourceObject) throws SailException {
 				return sourceObject.getContext();
@@ -211,7 +221,7 @@ class NativeSailStore implements SailStore {
 	 *                 no contexts are supplied the method operates on the entire repository.
 	 * @return A StatementIterator that can be used to iterate over the statements that match the specified pattern.
 	 */
-	CloseableIteration<? extends Statement, SailException> createStatementIterator(Resource subj, IRI pred, Value obj,
+	CloseableIteration<? extends Statement> createStatementIterator(Resource subj, IRI pred, Value obj,
 			boolean explicit, Resource... contexts) throws IOException {
 		int subjID = NativeValue.UNKNOWN_ID;
 		if (subj != null) {
@@ -245,7 +255,7 @@ class NativeSailStore implements SailStore {
 			for (Resource context : contexts) {
 				if (context == null) {
 					contextIDList.add(0);
-				} else {
+				} else if (!context.isTriple()) {
 					int contextID = valueStore.getID(context);
 
 					if (contextID != NativeValue.UNKNOWN_ID) {
@@ -304,6 +314,10 @@ class NativeSailStore implements SailStore {
 		}
 
 		return tripleStore.cardinality(subjID, predID, objID, contextID);
+	}
+
+	public void disableTxnStatus() {
+		this.tripleStore.disableTxnStatus();
 	}
 
 	private final class NativeSailSource extends BackingSailSource {
@@ -420,6 +434,11 @@ class NativeSailStore implements SailStore {
 		}
 
 		@Override
+		public void observeAll(Set<Changeset.SimpleStatementPattern> observed) {
+			// serializable is not supported at this level
+		}
+
+		@Override
 		public void clear(Resource... contexts) throws SailException {
 			removeStatements(null, null, null, explicit, contexts);
 		}
@@ -427,6 +446,44 @@ class NativeSailStore implements SailStore {
 		@Override
 		public void approve(Resource subj, IRI pred, Value obj, Resource ctx) throws SailException {
 			addStatement(subj, pred, obj, explicit, ctx);
+		}
+
+		@Override
+		public void approveAll(Set<Statement> approved, Set<Resource> approvedContexts) {
+			sinkStoreAccessLock.lock();
+			startTriplestoreTransaction();
+
+			try {
+				for (Statement statement : approved) {
+					Resource subj = statement.getSubject();
+					IRI pred = statement.getPredicate();
+					Value obj = statement.getObject();
+					Resource context = statement.getContext();
+
+					int subjID = valueStore.storeValue(subj);
+					int predID = valueStore.storeValue(pred);
+					int objID = valueStore.storeValue(obj);
+
+					int contextID = 0;
+					if (context != null) {
+						contextID = valueStore.storeValue(context);
+					}
+
+					boolean wasNew = tripleStore.storeTriple(subjID, predID, objID, contextID, explicit);
+					if (wasNew && context != null) {
+						contextStore.increment(context);
+					}
+
+				}
+			} catch (IOException e) {
+				throw new SailException(e);
+			} catch (RuntimeException e) {
+				logger.error("Encountered an unexpected problem while trying to add a statement", e);
+				throw e;
+			} finally {
+				sinkStoreAccessLock.unlock();
+			}
+
 		}
 
 		@Override
@@ -596,17 +653,17 @@ class NativeSailStore implements SailStore {
 		}
 
 		@Override
-		public CloseableIteration<? extends Namespace, SailException> getNamespaces() {
-			return new CloseableIteratorIteration<Namespace, SailException>(namespaceStore.iterator());
+		public CloseableIteration<? extends Namespace> getNamespaces() {
+			return new CloseableIteratorIteration<Namespace>(namespaceStore.iterator());
 		}
 
 		@Override
-		public CloseableIteration<? extends Resource, SailException> getContextIDs() throws SailException {
+		public CloseableIteration<? extends Resource> getContextIDs() throws SailException {
 			return new CloseableIteratorIteration<>(contextStore.iterator());
 		}
 
 		@Override
-		public CloseableIteration<? extends Statement, SailException> getStatements(Resource subj, IRI pred, Value obj,
+		public CloseableIteration<? extends Statement> getStatements(Resource subj, IRI pred, Value obj,
 				Resource... contexts) throws SailException {
 			try {
 				return createStatementIterator(subj, pred, obj, explicit, contexts);

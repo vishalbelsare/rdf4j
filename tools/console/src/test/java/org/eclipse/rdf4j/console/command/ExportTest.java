@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2018 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.console.command;
 
@@ -54,7 +57,7 @@ public class ExportTest extends AbstractCommandTest {
 	public final void testExportAll() throws RepositoryException, IOException {
 		File nq = new File(locationFile, "all.nq");
 		cmd.execute("export", nq.getAbsolutePath());
-		Model exp = null;
+		Model exp;
 		try (Reader reader = Files.newReader(nq, StandardCharsets.UTF_8)) {
 			exp = Rio.parse(reader, "http://example.com", RDFFormat.NQUADS);
 		}
@@ -71,7 +74,7 @@ public class ExportTest extends AbstractCommandTest {
 
 		File nq = new File(locationFile, "all.nq");
 		cmd.execute("export", nq.getName());
-		Model exp = null;
+		Model exp;
 		try (Reader reader = Files.newReader(nq, StandardCharsets.UTF_8)) {
 			exp = Rio.parse(reader, "http://example.com", RDFFormat.NQUADS);
 		}
@@ -84,7 +87,7 @@ public class ExportTest extends AbstractCommandTest {
 	public final void testExportContexts() throws RepositoryException, IOException {
 		File nq = new File(locationFile, "default.nq");
 		cmd.execute("export", nq.getAbsolutePath(), "null", "http://example.org/ns/context/resurrection");
-		Model exp = null;
+		Model exp;
 		try (Reader reader = Files.newReader(nq, StandardCharsets.UTF_8)) {
 			exp = Rio.parse(reader, "http://example.com", RDFFormat.NQUADS);
 		}

@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.shacl;
 
@@ -25,13 +28,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.eclipse.rdf4j.common.concurrent.locks.Properties;
 import org.eclipse.rdf4j.common.transaction.IsolationLevels;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.RDF4J;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.ParentReferenceChecker;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.repository.sail.SailRepositoryConnection;
@@ -40,8 +43,10 @@ import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.sail.NotifyingSail;
 import org.eclipse.rdf4j.sail.Sail;
 import org.eclipse.rdf4j.sail.SailConflictException;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.parallel.Isolated;
 import org.slf4j.LoggerFactory;
 
@@ -54,15 +59,18 @@ public abstract class MultithreadedTest {
 
 	@BeforeAll
 	public static void beforeAll() {
+		ParentReferenceChecker.skip = true;
+	}
 
+	@AfterAll
+	public static void afterAll() {
+		ParentReferenceChecker.skip = false;
 	}
 
 	@Test
+	@Timeout(value = 30, unit = TimeUnit.MINUTES)
 	public void testDataAndShapes() {
 		System.out.println("testDataAndShapes");
-
-		System.setProperty("org.eclipse.rdf4j.repository.debug", "true");
-		Properties.setLockTrackingEnabled(true);
 
 		for (int r = 0; r < 1; r++) {
 
@@ -333,6 +341,7 @@ public abstract class MultithreadedTest {
 	}
 
 	@Test
+	@Timeout(value = 30, unit = TimeUnit.MINUTES)
 	public void testLotsOfValidationFailuresSnapshot() throws IOException {
 		System.out.println("testLotsOfValidationFailuresSnapshot");
 		ShaclSail sail = new ShaclSail(getBaseSail());
@@ -348,8 +357,12 @@ public abstract class MultithreadedTest {
 	}
 
 	@Test
+	@Timeout(value = 30, unit = TimeUnit.MINUTES)
 	public void testLotsOfValidationFailuresSerializableValidation() throws IOException {
 		System.out.println("testLotsOfValidationFailuresSerializableValidation");
+		Logger root = (Logger) LoggerFactory.getLogger(ShaclSailBaseConfiguration.class.getName());
+		root.setLevel(Level.ERROR);
+
 		ShaclSail sail = new ShaclSail(getBaseSail());
 
 		sail.setParallelValidation(true);
@@ -362,6 +375,7 @@ public abstract class MultithreadedTest {
 	}
 
 	@Test
+	@Timeout(value = 30, unit = TimeUnit.MINUTES)
 	public void testLotsOfValidationFailuresSerializable() throws IOException {
 		System.out.println("testLotsOfValidationFailuresSerializable");
 
@@ -380,6 +394,7 @@ public abstract class MultithreadedTest {
 	}
 
 	@Test
+	@Timeout(value = 30, unit = TimeUnit.MINUTES)
 	public void testLotsOfValidationFailuresReadCommitted() throws IOException {
 		System.out.println("testLotsOfValidationFailuresReadCommitted");
 		ShaclSail sail = new ShaclSail(getBaseSail());
@@ -394,6 +409,7 @@ public abstract class MultithreadedTest {
 	}
 
 	@Test
+	@Timeout(value = 30, unit = TimeUnit.MINUTES)
 	public void testLotsOfValidationFailuresReadUncommitted() throws IOException {
 		System.out.println("testLotsOfValidationFailuresReadUncommitted");
 		ShaclSail sail = new ShaclSail(getBaseSail());

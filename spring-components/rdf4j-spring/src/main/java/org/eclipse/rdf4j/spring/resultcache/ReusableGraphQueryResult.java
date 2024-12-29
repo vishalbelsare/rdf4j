@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.spring.resultcache;
@@ -48,15 +51,15 @@ import org.eclipse.rdf4j.spring.support.query.DelegatingIterator;
  *
  * </pre>
  *
- * @since 4.0.0
  * @author Florian Kleedorfer
+ * @since 4.0.0
  */
 public class ReusableGraphQueryResult implements GraphQueryResult, ThrowableRecorder {
 	private GraphQueryResult originalResult;
-	private List<Statement> statements;
-	private AtomicBoolean recording = new AtomicBoolean(true);
-	private AtomicBoolean exceptionDuringRecording = new AtomicBoolean(false);
-	private BindingSet queryBindings;
+	private final List<Statement> statements;
+	private final AtomicBoolean recording = new AtomicBoolean(true);
+	private final AtomicBoolean exceptionDuringRecording = new AtomicBoolean(false);
+	private final BindingSet queryBindings;
 	private Map<String, String> namespaces;
 
 	public ReusableGraphQueryResult(GraphQueryResult result, BindingSet queryBindings) {

@@ -1,9 +1,12 @@
 /*******************************************************************************
- * .Copyright (c) 2020 Eclipse RDF4J contributors.
+ * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl.ast.planNodes;
@@ -16,7 +19,7 @@ import java.util.function.Function;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
-import org.eclipse.rdf4j.sail.SailException;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 
 /**
  * @author Håvard Ottestad
@@ -28,23 +31,27 @@ public class GroupByFilter implements PlanNode {
 	private boolean printed = false;
 	private ValidationExecutionLogger validationExecutionLogger;
 
-	public GroupByFilter(PlanNode parent, Function<Collection<ValidationTuple>, Boolean> filter) {
-		parent = PlanNodeHelper.handleSorting(this, parent);
-
-		this.parent = parent;
+	public GroupByFilter(PlanNode parent, Function<Collection<ValidationTuple>, Boolean> filter,
+			ConnectionsGroup connectionsGroup) {
+		this.parent = PlanNodeHelper.handleSorting(this, parent, connectionsGroup);
 		this.filter = filter;
 	}
 
 	@Override
-	public CloseableIteration<? extends ValidationTuple, SailException> iterator() {
+	public CloseableIteration<? extends ValidationTuple> iterator() {
 		return new LoggingCloseableIteration(this, validationExecutionLogger) {
 
-			final CloseableIteration<? extends ValidationTuple, SailException> parentIterator = parent.iterator();
+			private CloseableIteration<? extends ValidationTuple> parentIterator;
 
 			ValidationTuple next;
 			ValidationTuple tempNext;
 
 			final List<ValidationTuple> group = new ArrayList<>();
+
+			@Override
+			protected void init() {
+				parentIterator = parent.iterator();
+			}
 
 			private void calculateNext() {
 				if (next != null) {
@@ -81,20 +88,22 @@ public class GroupByFilter implements PlanNode {
 			}
 
 			@Override
-			public void localClose() throws SailException {
+			public void localClose() {
+				if (parentIterator != null) {
+					parentIterator.close();
+				}
 				group.clear();
-				parentIterator.close();
 			}
 
 			@Override
-			protected boolean localHasNext() throws SailException {
+			protected boolean localHasNext() {
 				calculateNext();
 
 				return next != null;
 			}
 
 			@Override
-			protected ValidationTuple loggingNext() throws SailException {
+			protected ValidationTuple loggingNext() {
 
 				calculateNext();
 
@@ -126,7 +135,7 @@ public class GroupByFilter implements PlanNode {
 
 	@Override
 	public String toString() {
-		return "GroupByCountFilter";
+		return "GroupByFilter";
 	}
 
 	@Override

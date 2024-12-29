@@ -1,22 +1,24 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.http.server;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
@@ -25,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
@@ -53,9 +56,9 @@ import org.eclipse.rdf4j.query.resultio.QueryResultIO;
 import org.eclipse.rdf4j.query.resultio.TupleQueryResultFormat;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.Rio;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -65,9 +68,9 @@ public class ProtocolIT {
 
 	private static TestServer server;
 
-	private static ValueFactory vf = SimpleValueFactory.getInstance();
+	private static final ValueFactory vf = SimpleValueFactory.getInstance();
 
-	@BeforeClass
+	@BeforeAll
 	public static void startServer() throws Exception {
 		server = new TestServer();
 		try {
@@ -78,7 +81,7 @@ public class ProtocolIT {
 		}
 	}
 
-	@AfterClass
+	@AfterAll
 	public static void stopServer() throws Exception {
 		server.stop();
 	}
@@ -146,9 +149,10 @@ public class ProtocolIT {
 	 */
 	@Test
 	public void testSPARQLselect() throws Exception {
-		TupleQueryResult queryResult = evaluateTupleQuery(TestServer.REPOSITORY_URL, "select * where{ ?X ?P ?Y }",
-				QueryLanguage.SPARQL);
-		QueryResultIO.writeTuple(queryResult, TupleQueryResultFormat.SPARQL, System.out);
+		try (TupleQueryResult queryResult = evaluateTupleQuery(TestServer.REPOSITORY_URL, "select * where{ ?X ?P ?Y }",
+				QueryLanguage.SPARQL)) {
+			QueryResultIO.writeTuple(queryResult, TupleQueryResultFormat.SPARQL, System.out);
+		}
 	}
 
 	/**
@@ -417,7 +421,7 @@ public class ProtocolIT {
 		Set<Namespace> namespaceDeletions = Sets.difference(namespacesBefore, namespacesAfter);
 		Set<Namespace> namespaceAdditions = Sets.difference(namespacesAfter, namespacesBefore);
 
-		assertTrue("Some namespaces have been deleted", namespaceDeletions.isEmpty());
+		assertTrue(namespaceDeletions.isEmpty(), "Some namespaces have been deleted");
 		assertEquals(Sets.newHashSet(new SimpleNamespace("", "http://example.org/")), namespaceAdditions);
 	}
 
@@ -519,12 +523,8 @@ public class ProtocolIT {
 		conn.setDoOutput(true);
 
 		try (InputStream dataStream = new ByteArrayInputStream(namespace.getBytes(StandardCharsets.UTF_8))) {
-			OutputStream connOut = conn.getOutputStream();
-
-			try {
+			try (OutputStream connOut = conn.getOutputStream()) {
 				IOUtil.transfer(dataStream, connOut);
-			} finally {
-				connOut.close();
 			}
 		}
 
@@ -572,12 +572,8 @@ public class ProtocolIT {
 		conn.setRequestProperty("Content-Type", dataFormat.getDefaultMIMEType());
 
 		try (InputStream dataStream = ProtocolIT.class.getResourceAsStream(file)) {
-			OutputStream connOut = conn.getOutputStream();
-
-			try {
-				IOUtil.transfer(dataStream, connOut);
-			} finally {
-				connOut.close();
+			try (OutputStream connOut = conn.getOutputStream()) {
+				IOUtil.transfer(Objects.requireNonNull(dataStream), connOut);
 			}
 		}
 
@@ -627,8 +623,7 @@ public class ProtocolIT {
 			// HTTP 200
 			if (responseCode == HttpURLConnection.HTTP_OK) {
 				// Process query results
-				return QueryResultIO.parseTuple(conn.getInputStream(), TupleQueryResultFormat.SPARQL,
-						new WeakReference<>(this));
+				return QueryResultIO.parseTuple(conn.getInputStream(), TupleQueryResultFormat.SPARQL, null);
 			} else {
 				String response = "location " + location + " responded: " + conn.getResponseMessage() + " ("
 						+ responseCode + ")";

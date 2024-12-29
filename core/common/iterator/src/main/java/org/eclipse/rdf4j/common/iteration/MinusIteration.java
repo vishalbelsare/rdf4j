@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.common.iteration;
@@ -19,13 +22,13 @@ import java.util.function.Supplier;
  * Note that duplicates can also be filtered by wrapping this Iteration in a {@link DistinctIteration}, but that has a
  * bit more overhead as it adds a second hash table lookup.
  */
-public class MinusIteration<E, X extends Exception> extends FilterIteration<E, X> {
+public class MinusIteration<E> extends FilterIteration<E> {
 
 	/*-----------*
 	 * Variables *
 	 *-----------*/
 
-	private final Iteration<? extends E, X> rightArg;
+	private final CloseableIteration<? extends E> rightArg;
 
 	private final boolean distinct;
 
@@ -46,7 +49,7 @@ public class MinusIteration<E, X extends Exception> extends FilterIteration<E, X
 	 * @param leftArg  An Iteration containing the main set of elements.
 	 * @param rightArg An Iteration containing the set of elements that should be filtered from the main set.
 	 */
-	public MinusIteration(Iteration<? extends E, X> leftArg, Iteration<? extends E, X> rightArg) {
+	public MinusIteration(CloseableIteration<? extends E> leftArg, CloseableIteration<? extends E> rightArg) {
 		this(leftArg, rightArg, false);
 	}
 
@@ -58,7 +61,8 @@ public class MinusIteration<E, X extends Exception> extends FilterIteration<E, X
 	 * @param rightArg An Iteration containing the set of elements that should be filtered from the main set.
 	 * @param distinct Flag indicating whether duplicate elements should be filtered from the result.
 	 */
-	public MinusIteration(Iteration<? extends E, X> leftArg, Iteration<? extends E, X> rightArg, boolean distinct) {
+	public MinusIteration(CloseableIteration<? extends E> leftArg, CloseableIteration<? extends E> rightArg,
+			boolean distinct) {
 		super(leftArg);
 
 		assert rightArg != null;
@@ -77,7 +81,8 @@ public class MinusIteration<E, X extends Exception> extends FilterIteration<E, X
 	 * @param rightArg An Iteration containing the set of elements that should be filtered from the main set.
 	 * @param distinct Flag indicating whether duplicate elements should be filtered from the result.
 	 */
-	public MinusIteration(Iteration<? extends E, X> leftArg, Iteration<? extends E, X> rightArg, boolean distinct,
+	public MinusIteration(CloseableIteration<? extends E> leftArg, CloseableIteration<? extends E> rightArg,
+			boolean distinct,
 			Supplier<Set<E>> setMaker) {
 		super(leftArg);
 
@@ -94,7 +99,7 @@ public class MinusIteration<E, X extends Exception> extends FilterIteration<E, X
 
 	// implements LookAheadIteration.getNextElement()
 	@Override
-	protected boolean accept(E object) throws X {
+	protected boolean accept(E object) {
 		if (!initialized) {
 			// Build set of elements-to-exclude from right argument
 			excludeSet = Iterations.asSet(rightArg);
@@ -117,11 +122,9 @@ public class MinusIteration<E, X extends Exception> extends FilterIteration<E, X
 	}
 
 	@Override
-	protected void handleClose() throws X {
-		try {
-			super.handleClose();
-		} finally {
-			Iterations.closeCloseable(rightArg);
+	protected void handleClose() {
+		if (rightArg != null) {
+			rightArg.close();
 		}
 	}
 }

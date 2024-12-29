@@ -1,16 +1,15 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl;
-
-import static junit.framework.TestCase.assertEquals;
-import static junit.framework.TestCase.assertFalse;
-import static junit.framework.TestCase.assertTrue;
 
 import java.io.IOException;
 import java.util.Map;
@@ -27,6 +26,7 @@ import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.repository.sail.SailRepositoryConnection;
 import org.eclipse.rdf4j.sail.shacl.results.ValidationReport;
 import org.eclipse.rdf4j.sail.shacl.results.ValidationResult;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -51,8 +51,8 @@ public class TruncatedValidationReportTest {
 				.collect(Collectors.groupingBy(ValidationResult::getSourceConstraintComponent, Collectors.counting()));
 		long total = collect.values().stream().mapToLong(l -> l).sum();
 
-		assertTrue(validationReport.isTruncated());
-		assertEquals(10, total);
+		Assertions.assertTrue(validationReport.isTruncated());
+		Assertions.assertEquals(10, total);
 
 	}
 
@@ -72,10 +72,10 @@ public class TruncatedValidationReportTest {
 				.collect(Collectors.groupingBy(ValidationResult::getSourceConstraintComponent, Collectors.counting()));
 		long total = collect.values().stream().mapToLong(l -> l).sum();
 
-		assertTrue(validationReport.isTruncated());
-		assertEquals(10, collect.get(SourceConstraintComponent.MinCountConstraintComponent).longValue());
-		assertEquals(10, collect.get(SourceConstraintComponent.DatatypeConstraintComponent).longValue());
-		assertEquals(20, total);
+		Assertions.assertTrue(validationReport.isTruncated());
+		Assertions.assertEquals(10, collect.get(SourceConstraintComponent.MinCountConstraintComponent).longValue());
+		Assertions.assertEquals(10, collect.get(SourceConstraintComponent.DatatypeConstraintComponent).longValue());
+		Assertions.assertEquals(20, total);
 
 	}
 
@@ -97,10 +97,10 @@ public class TruncatedValidationReportTest {
 				.collect(Collectors.groupingBy(ValidationResult::getSourceConstraintComponent, Collectors.counting()));
 		long total = collect.values().stream().mapToLong(l -> l).sum();
 
-		assertTrue(validationReport.isTruncated());
-		assertEquals(10, collect.get(SourceConstraintComponent.MinCountConstraintComponent).longValue());
-		assertEquals(10, collect.get(SourceConstraintComponent.DatatypeConstraintComponent).longValue());
-		assertEquals(20, total);
+		Assertions.assertTrue(validationReport.isTruncated());
+		Assertions.assertEquals(10, collect.get(SourceConstraintComponent.MinCountConstraintComponent).longValue());
+		Assertions.assertEquals(10, collect.get(SourceConstraintComponent.DatatypeConstraintComponent).longValue());
+		Assertions.assertEquals(20, total);
 
 	}
 
@@ -120,9 +120,9 @@ public class TruncatedValidationReportTest {
 				.collect(Collectors.groupingBy(ValidationResult::getSourceConstraintComponent, Collectors.counting()));
 		long total = collect.values().stream().mapToLong(l -> l).sum();
 
-		assertTrue(validationReport.isTruncated());
-		assertFalse(validationReport.conforms());
-		assertEquals(0, total);
+		Assertions.assertTrue(validationReport.isTruncated());
+		Assertions.assertFalse(validationReport.conforms());
+		Assertions.assertEquals(0, total);
 
 	}
 
@@ -142,9 +142,9 @@ public class TruncatedValidationReportTest {
 				.collect(Collectors.groupingBy(ValidationResult::getSourceConstraintComponent, Collectors.counting()));
 		long total = collect.values().stream().mapToLong(l -> l).sum();
 
-		assertTrue(validationReport.isTruncated());
-		assertFalse(validationReport.conforms());
-		assertEquals(0, total);
+		Assertions.assertTrue(validationReport.isTruncated());
+		Assertions.assertFalse(validationReport.conforms());
+		Assertions.assertEquals(0, total);
 
 	}
 
@@ -165,10 +165,10 @@ public class TruncatedValidationReportTest {
 				.collect(Collectors.groupingBy(ValidationResult::getSourceConstraintComponent, Collectors.counting()));
 		long total = collect.values().stream().mapToLong(l -> l).sum();
 
-		assertTrue(validationReport.isTruncated());
-		assertEquals(5, collect.get(SourceConstraintComponent.MinCountConstraintComponent).longValue());
-		assertEquals(5, collect.get(SourceConstraintComponent.DatatypeConstraintComponent).longValue());
-		assertEquals(10, total);
+		Assertions.assertTrue(validationReport.isTruncated());
+		Assertions.assertEquals(5, collect.get(SourceConstraintComponent.MinCountConstraintComponent).longValue());
+		Assertions.assertEquals(5, collect.get(SourceConstraintComponent.DatatypeConstraintComponent).longValue());
+		Assertions.assertEquals(10, total);
 
 	}
 
@@ -189,10 +189,10 @@ public class TruncatedValidationReportTest {
 				.collect(Collectors.groupingBy(ValidationResult::getSourceConstraintComponent, Collectors.counting()));
 		long total = collect.values().stream().mapToLong(l -> l).sum();
 
-		assertTrue(validationReport.isTruncated());
-		assertEquals(20, total);
+		Assertions.assertTrue(validationReport.isTruncated());
+		Assertions.assertEquals(20, total);
 
-		assertTrue(validationReport.asModel().contains(null, RDF4J.TRUNCATED, BooleanLiteral.TRUE));
+		Assertions.assertTrue(validationReport.asModel().contains(null, RDF4J.TRUNCATED, BooleanLiteral.TRUE));
 	}
 
 	@Test
@@ -211,12 +211,12 @@ public class TruncatedValidationReportTest {
 				.collect(Collectors.groupingBy(ValidationResult::getSourceConstraintComponent, Collectors.counting()));
 		long total = collect.values().stream().mapToLong(l -> l).sum();
 
-		assertFalse(validationReport.isTruncated());
-		assertEquals(NUMBER_OF_FAILURES,
+		Assertions.assertFalse(validationReport.isTruncated());
+		Assertions.assertEquals(NUMBER_OF_FAILURES,
 				collect.get(SourceConstraintComponent.MinCountConstraintComponent).longValue());
-		assertEquals(NUMBER_OF_FAILURES,
+		Assertions.assertEquals(NUMBER_OF_FAILURES,
 				collect.get(SourceConstraintComponent.DatatypeConstraintComponent).longValue());
-		assertEquals(NUMBER_OF_FAILURES * 2, total);
+		Assertions.assertEquals(NUMBER_OF_FAILURES * 2, total);
 
 	}
 
@@ -233,12 +233,10 @@ public class TruncatedValidationReportTest {
 				.collect(Collectors.groupingBy(ValidationResult::getSourceConstraintComponent, Collectors.counting()));
 		long total = collect.values().stream().mapToLong(l -> l).sum();
 
-		assertTrue(validationReport.isTruncated());
-		assertEquals(1000,
-				collect.get(SourceConstraintComponent.MinCountConstraintComponent).longValue());
-		assertEquals(1000,
-				collect.get(SourceConstraintComponent.DatatypeConstraintComponent).longValue());
-		assertEquals(2000, total);
+		Assertions.assertTrue(validationReport.isTruncated());
+		Assertions.assertEquals(1000, collect.get(SourceConstraintComponent.MinCountConstraintComponent).longValue());
+		Assertions.assertEquals(1000, collect.get(SourceConstraintComponent.DatatypeConstraintComponent).longValue());
+		Assertions.assertEquals(2000, total);
 
 	}
 
@@ -259,12 +257,12 @@ public class TruncatedValidationReportTest {
 				.collect(Collectors.groupingBy(ValidationResult::getSourceConstraintComponent, Collectors.counting()));
 		long total = collect.values().stream().mapToLong(l -> l).sum();
 
-		assertFalse(validationReport.isTruncated());
-		assertEquals(NUMBER_OF_FAILURES,
+		Assertions.assertFalse(validationReport.isTruncated());
+		Assertions.assertEquals(NUMBER_OF_FAILURES,
 				collect.get(SourceConstraintComponent.MinCountConstraintComponent).longValue());
-		assertEquals(NUMBER_OF_FAILURES,
+		Assertions.assertEquals(NUMBER_OF_FAILURES,
 				collect.get(SourceConstraintComponent.DatatypeConstraintComponent).longValue());
-		assertEquals(NUMBER_OF_FAILURES * 2, total);
+		Assertions.assertEquals(NUMBER_OF_FAILURES * 2, total);
 
 	}
 
@@ -294,10 +292,10 @@ public class TruncatedValidationReportTest {
 				.collect(Collectors.groupingBy(ValidationResult::getSourceConstraintComponent, Collectors.counting()));
 		long total = collect.values().stream().mapToLong(l -> l).sum();
 
-		assertTrue(validationReport.isTruncated());
-		assertEquals(15, collect.get(SourceConstraintComponent.MinCountConstraintComponent).longValue());
-		assertEquals(15, collect.get(SourceConstraintComponent.DatatypeConstraintComponent).longValue());
-		assertEquals(30, total);
+		Assertions.assertTrue(validationReport.isTruncated());
+		Assertions.assertEquals(15, collect.get(SourceConstraintComponent.MinCountConstraintComponent).longValue());
+		Assertions.assertEquals(15, collect.get(SourceConstraintComponent.DatatypeConstraintComponent).longValue());
+		Assertions.assertEquals(30, total);
 	}
 
 	private ValidationReport getValidationReport(SailRepository shaclRepository) {

@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.repository.sparql.query;
 
@@ -12,8 +15,8 @@ import java.util.regex.Matcher;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.base.CoreDatatype;
 import org.eclipse.rdf4j.model.util.Literals;
-import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.parser.sparql.SPARQLQueries;
 
@@ -36,9 +39,9 @@ public class QueryStringUtil {
 	 * @param queryString
 	 * @param bindings
 	 * @return the modified queryString
-	 * @deprecated since 2.0.use {@link #getTupleQueryString(String, BindingSet)}
+	 * @deprecated Use {@link #getTupleQueryString(String, BindingSet)}
 	 */
-	@Deprecated
+	@Deprecated(since = "2.0")
 	public static String getQueryString(String queryString, BindingSet bindings) {
 		return getTupleQueryString(queryString, bindings);
 	}
@@ -52,7 +55,7 @@ public class QueryStringUtil {
 	 * @return the modified queryString
 	 */
 	public static String getTupleQueryString(String queryString, BindingSet bindings) {
-		if (bindings.size() == 0) {
+		if (bindings.isEmpty()) {
 			return queryString;
 		}
 
@@ -105,7 +108,7 @@ public class QueryStringUtil {
 	 * @return the modified queryString
 	 */
 	public static String getGraphQueryString(String queryString, BindingSet bindings) {
-		if (bindings.size() == 0) {
+		if (bindings.isEmpty()) {
 			return queryString;
 		}
 
@@ -124,7 +127,7 @@ public class QueryStringUtil {
 
 	/**
 	 * Converts a value to its SPARQL string representation.
-	 *
+	 * <p>
 	 * Null will be converted to UNDEF (may be used in VALUES only).
 	 *
 	 * @param value the value to convert
@@ -136,7 +139,7 @@ public class QueryStringUtil {
 
 	/**
 	 * Converts a value to its SPARQL string representation and appends it to a StringBuilder.
-	 *
+	 * <p>
 	 * Null will be converted to UNDEF (may be used in VALUES only).
 	 *
 	 * @param sb    StringBuilder to append to
@@ -168,7 +171,7 @@ public class QueryStringUtil {
 		if (Literals.isLanguageLiteral(lit)) {
 			sb.append('@');
 			sb.append(lit.getLanguage().get());
-		} else if (!lit.getDatatype().equals(XSD.STRING)) {
+		} else if (lit.getCoreDatatype() != CoreDatatype.XSD.STRING) {
 			// Don't append type if it's xsd:string, this keeps it compatible with RDF 1.0
 			sb.append("^^<");
 			sb.append(lit.getDatatype().stringValue());

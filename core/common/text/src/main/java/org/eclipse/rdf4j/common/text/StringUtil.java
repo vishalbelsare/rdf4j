@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.common.text;
@@ -21,69 +24,16 @@ public class StringUtil {
 		Arrays.sort(IRI_DONT_ESCAPE);
 	}
 
-	/**
-	 * Substitute String "old" by String "new" in String "text" everywhere. This is a static util function that I could
-	 * not place anywhere more appropriate. The name of this function is from the good-old awk time.
-	 *
-	 * @param olds The String to be substituted.
-	 * @param news The String is the new content.
-	 * @param text The String in which the substitution is done.
-	 * @return The result String containing the substitutions; if no substitutions were made, the result is 'text'.
-	 * 
-	 * @deprecated use {@link String#replace(CharSequence, CharSequence) instead}.
-	 */
-	@Deprecated
-	public static String gsub(String olds, String news, String text) {
-		if (olds == null || olds.length() == 0) {
-			// Nothing to substitute.
-			return text;
-		}
-		if (text == null) {
-			return null;
-		}
-
-		// Search for any occurences of 'olds'.
-		int oldsIndex = text.indexOf(olds);
-		if (oldsIndex == -1) {
-			// Nothing to substitute.
-			return text;
-		}
-
-		// We're going to do some substitutions.
-		StringBuilder buf = new StringBuilder(text.length());
-		int prevIndex = 0;
-
-		while (oldsIndex >= 0) {
-			// First, add the text between the previous and the current
-			// occurence.
-			buf.append(text.substring(prevIndex, oldsIndex));
-
-			// Then add the substition pattern
-			buf.append(news);
-
-			// Remember the index for the next loop.
-			prevIndex = oldsIndex + olds.length();
-
-			// Search for the next occurence.
-			oldsIndex = text.indexOf(olds, prevIndex);
-		}
-
-		// Add the part after the last occurence.
-		buf.append(text.substring(prevIndex));
-
-		return buf.toString();
-	}
-
 	private static String hex(int c) {
 		return Integer.toHexString(c).toUpperCase(Locale.US);
 	}
 
 	/**
 	 * Escapes a string to a (mostly) conforming IRI value and append it to the appendable.
-	 *
+	 * <p>
 	 * Non-ASCII (valid) values can optionally be numerically encoded by setting escapeUnicode to true. Most characters
 	 * that are invalid in an IRI - like a white space or control character - are percent-encoded.
-	 *
+	 * <p>
 	 * This is slightly faster than {@link org.eclipse.rdf4j.common.net.ParsedIRI#create(String)} for valid IRI (without
 	 * percents) and much faster for IRI with invalid (percent-encoded) characters, though it is less accurate.
 	 *

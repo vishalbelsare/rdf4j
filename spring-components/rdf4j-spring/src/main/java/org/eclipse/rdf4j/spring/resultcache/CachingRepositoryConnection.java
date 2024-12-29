@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.spring.resultcache;
@@ -14,7 +17,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.net.URL;
 
-import org.eclipse.rdf4j.common.iteration.Iteration;
+import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
@@ -31,15 +34,15 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFParseException;
 
 /**
- * @since 4.0.0
  * @author Florian Kleedorfer
+ * @since 4.0.0
  */
 public class CachingRepositoryConnection extends RepositoryConnectionWrapper implements Clearable {
-	private LRUResultCache<ReusableTupleQueryResult> localTupleQueryResultCache;
-	private LRUResultCache<ReusableGraphQueryResult> localGraphQueryResultCache;
-	private LRUResultCache<ReusableTupleQueryResult> globalTupleQueryResultCache;
-	private LRUResultCache<ReusableGraphQueryResult> globalGraphQueryResultCache;
-	private ResultCacheProperties properties;
+	private final LRUResultCache<ReusableTupleQueryResult> localTupleQueryResultCache;
+	private final LRUResultCache<ReusableGraphQueryResult> localGraphQueryResultCache;
+	private final LRUResultCache<ReusableTupleQueryResult> globalTupleQueryResultCache;
+	private final LRUResultCache<ReusableGraphQueryResult> globalGraphQueryResultCache;
+	private final ResultCacheProperties properties;
 	private boolean clearGlobalResultCacheOnClose = false;
 
 	public CachingRepositoryConnection(
@@ -109,7 +112,9 @@ public class CachingRepositoryConnection extends RepositoryConnectionWrapper imp
 		super.close();
 	}
 
-	/** As we are changing the repository's content, we have to reset all caches (even though it */
+	/**
+	 * As we are changing the repository's content, we have to reset all caches (even though it
+	 */
 	@Override
 	public void markDirty() {
 		this.localGraphQueryResultCache.markDirty();
@@ -147,9 +152,9 @@ public class CachingRepositoryConnection extends RepositoryConnectionWrapper imp
 	}
 
 	@Override
-	public <E extends Exception> void add(
-			Iteration<? extends Statement, E> statementIter, Resource... contexts)
-			throws RepositoryException, E {
+	public void add(
+			CloseableIteration<? extends Statement> statementIter, Resource... contexts)
+			throws RepositoryException {
 		super.add(statementIter, contexts);
 		markDirty();
 	}
@@ -195,9 +200,9 @@ public class CachingRepositoryConnection extends RepositoryConnectionWrapper imp
 	}
 
 	@Override
-	public <E extends Exception> void remove(
-			Iteration<? extends Statement, E> statementIter, Resource... contexts)
-			throws RepositoryException, E {
+	public void remove(
+			CloseableIteration<? extends Statement> statementIter, Resource... contexts)
+			throws RepositoryException {
 		super.remove(statementIter, contexts);
 		markDirty();
 	}

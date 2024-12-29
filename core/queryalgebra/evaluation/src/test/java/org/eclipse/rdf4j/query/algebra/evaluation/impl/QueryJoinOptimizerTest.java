@@ -1,15 +1,20 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra.evaluation.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,12 +32,12 @@ import org.eclipse.rdf4j.query.algebra.StatementPattern;
 import org.eclipse.rdf4j.query.algebra.TupleExpr;
 import org.eclipse.rdf4j.query.algebra.UnaryTupleOperator;
 import org.eclipse.rdf4j.query.algebra.evaluation.QueryOptimizerTest;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.QueryJoinOptimizer;
 import org.eclipse.rdf4j.query.algebra.helpers.AbstractQueryModelVisitor;
 import org.eclipse.rdf4j.query.parser.ParsedQuery;
 import org.eclipse.rdf4j.query.parser.QueryParserUtil;
 import org.eclipse.rdf4j.query.parser.sparql.SPARQLParser;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests to monitor QueryJoinOptimizer behaviour.
@@ -55,7 +60,7 @@ public class QueryJoinOptimizerTest extends QueryOptimizerTest {
 		testOptimizer(expectedQuery, query);
 	}
 
-	@Test(expected = AssertionError.class)
+	@Test
 	public void testContextOptimization() throws RDF4JException {
 		String query = "prefix ex: <ex:>" + "select ?x ?y ?z ?g ?p ?o where {" + " graph ?g {" + "  ex:s ?sp ?so. "
 				+ "  ?ps ex:p ?po. " + "  ?os ?op 'ex:o'. " + " }" + " ?x ?y ?z. " + "}";
@@ -67,7 +72,7 @@ public class QueryJoinOptimizerTest extends QueryOptimizerTest {
 		String expectedQuery = "prefix ex: <ex:>" + "select ?x ?y ?z ?g ?p ?o where {" + " graph ?g {"
 				+ "  ex:s ?sp ?so. " + "  ?ps ex:p ?po. " + "  ?os ?op 'ex:o'. " + " }" + " ?x ?y ?z. " + "}";
 
-		testOptimizer(expectedQuery, query);
+		assertThrows(AssertionError.class, () -> testOptimizer(expectedQuery, query));
 	}
 
 	@Test
@@ -89,7 +94,7 @@ public class QueryJoinOptimizerTest extends QueryOptimizerTest {
 	}
 
 	@Test
-	public void testSES2116JoinBind() throws Exception {
+	public void testSES2116JoinBind() {
 
 		StringBuilder qb = new StringBuilder();
 		qb.append("SELECT ?subject ?name ?row {\n" + "  ?subject <http://localhost/table_1> ?uri .\n"
@@ -99,22 +104,21 @@ public class QueryJoinOptimizerTest extends QueryOptimizerTest {
 
 		SPARQLParser parser = new SPARQLParser();
 		ParsedQuery q = parser.parseQuery(qb.toString(), null);
-		QueryJoinOptimizer opt = new QueryJoinOptimizer();
+		QueryJoinOptimizer opt = new QueryJoinOptimizer(new EvaluationStatistics(), new EmptyTripleSource());
 		QueryRoot optRoot = new QueryRoot(q.getTupleExpr());
 		opt.optimize(optRoot, null, null);
 		TupleExpr leaf = findLeaf(optRoot);
-		Assert.assertTrue("Extension must be evaluated before StatementPattern",
-				leaf.getParentNode() instanceof Extension);
+		assertTrue(leaf.getParentNode() instanceof Extension, "Extension must be evaluated before StatementPattern");
 	}
 
 	@Test
-	public void bindSubselectJoinOrder() throws Exception {
+	public void bindSubselectJoinOrder() {
 		String query = "SELECT * WHERE {\n" + "    BIND (bnode() as ?ct01) \n" + "    { SELECT ?s WHERE {\n"
 				+ "            ?s ?p ?o .\n" + "      }\n" + "      LIMIT 10\n" + "    }\n" + "}";
 
 		SPARQLParser parser = new SPARQLParser();
 		ParsedQuery q = parser.parseQuery(query, null);
-		QueryJoinOptimizer opt = new QueryJoinOptimizer();
+		QueryJoinOptimizer opt = new QueryJoinOptimizer(new EvaluationStatistics(), new EmptyTripleSource());
 		QueryRoot optRoot = new QueryRoot(q.getTupleExpr());
 		opt.optimize(optRoot, null, null);
 
@@ -170,7 +174,7 @@ public class QueryJoinOptimizerTest extends QueryOptimizerTest {
 
 		SPARQLParser parser = new SPARQLParser();
 		ParsedQuery q = parser.parseQuery(query, null);
-		QueryJoinOptimizer opt = new QueryJoinOptimizer();
+		QueryJoinOptimizer opt = new QueryJoinOptimizer(new EvaluationStatistics(), new EmptyTripleSource());
 		QueryRoot optRoot = new QueryRoot(q.getTupleExpr());
 		opt.optimize(optRoot, null, null);
 
@@ -190,7 +194,7 @@ public class QueryJoinOptimizerTest extends QueryOptimizerTest {
 
 	@Override
 	public QueryJoinOptimizer getOptimizer() {
-		return new QueryJoinOptimizer();
+		return new QueryJoinOptimizer(new EvaluationStatistics(), new EmptyTripleSource());
 	}
 
 	private TupleExpr findLeaf(TupleExpr expr) {
@@ -235,7 +239,7 @@ public class QueryJoinOptimizerTest extends QueryOptimizerTest {
 
 	class StatementFinder extends AbstractQueryModelVisitor<RuntimeException> {
 
-		private List<StatementPattern> statements = new ArrayList<>();
+		private final List<StatementPattern> statements = new ArrayList<>();
 
 		@Override
 		public void meet(StatementPattern st) {

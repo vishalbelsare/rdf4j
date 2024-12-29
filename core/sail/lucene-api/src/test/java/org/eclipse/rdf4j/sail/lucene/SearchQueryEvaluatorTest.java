@@ -1,13 +1,15 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.lucene;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -42,7 +44,7 @@ abstract class SearchQueryEvaluatorTest {
 		protected Set<String> wktFields = Collections.singleton(SearchFields.getPropertyField(GEO.AS_WKT));
 
 		@Override
-		public void initialize(Properties parameters) throws Exception {
+		public void initialize(Properties parameters) {
 		}
 
 		@Override
@@ -51,7 +53,7 @@ abstract class SearchQueryEvaluatorTest {
 		}
 
 		@Override
-		public void shutDown() throws IOException {
+		public void shutDown() {
 		}
 
 		@Override
@@ -85,39 +87,39 @@ abstract class SearchQueryEvaluatorTest {
 		}
 
 		@Override
-		public void begin() throws IOException {
+		public void begin() {
 		}
 
 		@Override
-		public void commit() throws IOException {
+		public void commit() {
 		}
 
 		@Override
-		public void rollback() throws IOException {
+		public void rollback() {
 		}
 
 		@Override
-		public void addStatement(Statement statement) throws IOException {
+		public void addStatement(Statement statement) {
 		}
 
 		@Override
-		public void removeStatement(Statement statement) throws IOException {
+		public void removeStatement(Statement statement) {
 		}
 
 		@Override
-		public void addRemoveStatements(Collection<Statement> added, Collection<Statement> removed) throws IOException {
+		public void addRemoveStatements(Collection<Statement> added, Collection<Statement> removed) {
 		}
 
 		@Override
-		public void clearContexts(Resource... contexts) throws IOException {
+		public void clearContexts(Resource... contexts) {
 		}
 
 		@Override
-		public void addDocuments(Resource subject, List<Statement> statements) throws IOException {
+		public void addDocuments(Resource subject, List<Statement> statements) {
 		}
 
 		@Override
-		public void clear() throws IOException {
+		public void clear() {
 		}
 	}
 }

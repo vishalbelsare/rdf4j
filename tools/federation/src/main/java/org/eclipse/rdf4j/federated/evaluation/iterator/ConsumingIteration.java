@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.federated.evaluation.iterator;
 
@@ -11,7 +14,6 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
-import org.eclipse.rdf4j.common.iteration.Iterations;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 
@@ -28,11 +30,11 @@ import com.google.common.collect.Lists;
  * @author Andreas Schwarte
  *
  */
-public class ConsumingIteration implements CloseableIteration<BindingSet, QueryEvaluationException> {
+public class ConsumingIteration implements CloseableIteration<BindingSet> {
 
 	private final List<BindingSet> consumed = Lists.newArrayList();
 
-	private final CloseableIteration<BindingSet, QueryEvaluationException> innerIter;
+	private final CloseableIteration<BindingSet> innerIter;
 
 	/**
 	 * The index of the next element that will be returned by a call to {@link #next()}.
@@ -44,7 +46,7 @@ public class ConsumingIteration implements CloseableIteration<BindingSet, QueryE
 	 * @param max  the number of results to be consumed.
 	 * @throws QueryEvaluationException
 	 */
-	public ConsumingIteration(CloseableIteration<BindingSet, QueryEvaluationException> iter, int max)
+	public ConsumingIteration(CloseableIteration<BindingSet> iter, int max)
 			throws QueryEvaluationException {
 
 		innerIter = iter;
@@ -53,6 +55,11 @@ public class ConsumingIteration implements CloseableIteration<BindingSet, QueryE
 		try {
 			while (consumed.size() < max && iter.hasNext()) {
 				consumed.add(iter.next());
+				if (Thread.interrupted()) {
+					Thread.currentThread().interrupt();
+					close();
+					return;
+				}
 			}
 			if (!iter.hasNext()) {
 				iter.close();
@@ -60,7 +67,7 @@ public class ConsumingIteration implements CloseableIteration<BindingSet, QueryE
 			completed = true;
 		} finally {
 			if (!completed) {
-				iter.close();
+				close();
 			}
 		}
 
@@ -68,6 +75,12 @@ public class ConsumingIteration implements CloseableIteration<BindingSet, QueryE
 
 	@Override
 	public boolean hasNext() throws QueryEvaluationException {
+		if (Thread.interrupted()) {
+			Thread.currentThread().interrupt();
+			close();
+			return false;
+		}
+
 		return currentIndex < consumed.size() || innerIter.hasNext();
 	}
 
@@ -94,7 +107,7 @@ public class ConsumingIteration implements CloseableIteration<BindingSet, QueryE
 
 	@Override
 	public void close() throws QueryEvaluationException {
-		Iterations.closeCloseable(innerIter);
+		innerIter.close();
 	}
 
 }

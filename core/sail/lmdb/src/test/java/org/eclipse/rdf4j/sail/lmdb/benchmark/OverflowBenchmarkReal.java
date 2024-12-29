@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.lmdb.benchmark;
@@ -41,10 +44,10 @@ import ch.qos.logback.classic.Logger;
  * Benchmarks transaction isolation and overflow performance with real data.
  */
 @State(Scope.Benchmark)
-@Warmup(iterations = 0)
+@Warmup(iterations = 5)
 @BenchmarkMode({ Mode.AverageTime })
 @Fork(value = 1, jvmArgs = { "-Xms500M", "-Xmx500M", "-XX:+UseParallelGC" })
-@Measurement(iterations = 10, batchSize = 1, time = 1, timeUnit = TimeUnit.MILLISECONDS)
+@Measurement(iterations = 5, batchSize = 1, time = 1, timeUnit = TimeUnit.MILLISECONDS)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class OverflowBenchmarkReal {
 
@@ -52,7 +55,7 @@ public class OverflowBenchmarkReal {
 	public void setup() {
 		((Logger) (LoggerFactory
 				.getLogger("org.eclipse.rdf4j.sail.lmdb.MemoryOverflowModel")))
-						.setLevel(ch.qos.logback.classic.Level.DEBUG);
+				.setLevel(ch.qos.logback.classic.Level.DEBUG);
 	}
 
 	public static void main(String[] args) throws RunnerException {

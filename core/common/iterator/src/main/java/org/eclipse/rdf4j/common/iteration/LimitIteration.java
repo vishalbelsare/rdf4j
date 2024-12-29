@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.common.iteration;
@@ -14,7 +17,7 @@ import java.util.NoSuchElementException;
  * An Iteration that limits the amount of elements that it returns from an underlying Iteration to a fixed amount. This
  * class returns the first <var>limit</var> elements from the underlying Iteration and drops the rest.
  */
-public class LimitIteration<E, X extends Exception> extends IterationWrapper<E, X> {
+public class LimitIteration<E> extends IterationWrapper<E> {
 
 	/*-----------*
 	 * Variables *
@@ -40,10 +43,9 @@ public class LimitIteration<E, X extends Exception> extends IterationWrapper<E, 
 	 * @param iter  The underlying Iteration, must not be <var>null</var>.
 	 * @param limit The number of query answers to return, must be &gt;= 0.
 	 */
-	public LimitIteration(Iteration<? extends E, X> iter, long limit) {
+	public LimitIteration(CloseableIteration<? extends E> iter, long limit) {
 		super(iter);
 
-		assert iter != null;
 		assert limit >= 0;
 
 		this.limit = limit;
@@ -55,7 +57,7 @@ public class LimitIteration<E, X extends Exception> extends IterationWrapper<E, 
 	 *---------*/
 
 	@Override
-	public boolean hasNext() throws X {
+	public boolean hasNext() {
 		if (isClosed()) {
 			return false;
 		}
@@ -68,7 +70,7 @@ public class LimitIteration<E, X extends Exception> extends IterationWrapper<E, 
 	}
 
 	@Override
-	public E next() throws X {
+	public E next() {
 		if (isClosed()) {
 			throw new NoSuchElementException("The iteration has been closed.");
 		}

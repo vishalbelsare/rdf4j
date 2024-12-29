@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2017 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.common.net;
@@ -69,11 +72,11 @@ import java.util.List;
  * and the path <i>/bar/jar.jar!/baz/entry.txt</i>.
  *
  * @author James Leigh
- * @since 2.3
  * @see <a href="http://www.ietf.org/rfc/rfc3987.txt"><i>RFC&nbsp;3987: Internationalized Resource Identifiers
  *      (IRIs)</i></a>
  * @see <a href="http://www.ietf.org/rfc/rfc3986.txt"><i>RFC&nbsp;3986: Uniform Resource Identifiers (URI): Generic
  *      Syntax</i></a>
+ * @since 2.3
  */
 public class ParsedIRI implements Cloneable, Serializable {
 
@@ -81,52 +84,53 @@ public class ParsedIRI implements Cloneable, Serializable {
 
 	private static final Comparator<int[]> CMP = (int[] o1, int[] o2) -> o1[0] - o2[0];
 
-	private static int EOF = 0;
+	private static final int EOF = 0;
 
-	private static int[][] iprivate = { new int[] { 0xE000, 0xF8FF }, new int[] { 0xF0000, 0xFFFFD },
+	private static final int[][] iprivate = { new int[] { 0xE000, 0xF8FF }, new int[] { 0xF0000, 0xFFFFD },
 			new int[] { 0x100000, 0x10FFFD } };
 
-	private static int[][] ucschar = { new int[] { 0x00A0, 0xD7FF }, new int[] { 0xF900, 0xFDCF },
+	private static final int[][] ucschar = { new int[] { 0x00A0, 0xD7FF }, new int[] { 0xF900, 0xFDCF },
 			new int[] { 0xFDF0, 0xFFEF }, new int[] { 0x10000, 0x1FFFD }, new int[] { 0x20000, 0x2FFFD },
 			new int[] { 0x30000, 0x3FFFD }, new int[] { 0x40000, 0x4FFFD }, new int[] { 0x50000, 0x5FFFD },
 			new int[] { 0x60000, 0x6FFFD }, new int[] { 0x70000, 0x7FFFD }, new int[] { 0x80000, 0x8FFFD },
 			new int[] { 0x90000, 0x9FFFD }, new int[] { 0xA0000, 0xAFFFD }, new int[] { 0xB0000, 0xBFFFD },
 			new int[] { 0xC0000, 0xCFFFD }, new int[] { 0xD0000, 0xDFFFD }, new int[] { 0xE1000, 0xEFFFD } };
 
-	private static int[][] ALPHA = { new int[] { 'A', 'Z' }, new int[] { 'a', 'z' } };
+	private static final int[][] ALPHA = { new int[] { 'A', 'Z' }, new int[] { 'a', 'z' } };
 
-	private static int[][] DIGIT = { new int[] { '0', '9' } };
+	private static final int[][] DIGIT = { new int[] { '0', '9' } };
 
-	private static int[][] sub_delims = union('!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '=');
+	private static final int[][] sub_delims = union('!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '=');
 
-	private static int[][] gen_delims = union(':', '/', '?', '#', '[', ']', '@');
+	private static final int[][] gen_delims = union(':', '/', '?', '#', '[', ']', '@');
 
-	private static int[][] reserved = union(gen_delims, sub_delims);
+	private static final int[][] reserved = union(gen_delims, sub_delims);
 
-	private static int[][] unreserved_rfc3986 = union(ALPHA, DIGIT, '-', '.', '_', '~');
+	private static final int[][] unreserved_rfc3986 = union(ALPHA, DIGIT, '-', '.', '_', '~');
 
-	private static int[][] unreserved = union(unreserved_rfc3986, ucschar);
+	private static final int[][] unreserved = union(unreserved_rfc3986, ucschar);
 
-	private static int[][] schar = union(ALPHA, DIGIT, '+', '-', '.');
+	private static final int[][] schar = union(ALPHA, DIGIT, '+', '-', '.');
 
-	private static int[][] uchar = union(unreserved, sub_delims, ':');
+	private static final int[][] uchar = union(unreserved, sub_delims, ':');
 
-	private static int[][] hchar = union(unreserved, sub_delims);
+	private static final int[][] hchar = union(unreserved, sub_delims);
 
-	private static int[][] pchar = union(unreserved, sub_delims, ':', '@');
+	private static final int[][] pchar = union(unreserved, sub_delims, ':', '@');
 
-	private static int[][] qchar = union(pchar, iprivate, '/', '?');
+	private static final int[][] qchar = union(pchar, iprivate, '/', '?');
 
-	private static int[][] fchar = union(pchar, '/', '?');
+	private static final int[][] fchar = union(pchar, '/', '?');
 
-	private static int[] HEXDIG = flatten(union(DIGIT, new int[][] { new int[] { 'A', 'F' }, new int[] { 'a', 'f' } }));
+	private static final int[] HEXDIG = flatten(
+			union(DIGIT, new int[][] { new int[] { 'A', 'F' }, new int[] { 'a', 'f' } }));
 
-	private static int[] ascii = flatten(union(unreserved_rfc3986, reserved, '%'));
+	private static final int[] ascii = flatten(union(unreserved_rfc3986, reserved, '%'));
 
-	private static int[] common = flatten(
+	private static final int[] common = flatten(
 			union(unreserved_rfc3986, reserved, '%', '<', '>', '"', ' ', '{', '}', '|', '\\', '^', '`'));
 
-	private static String[] common_pct = pctEncode(common);
+	private static final String[] common_pct = pctEncode(common);
 
 	private static int[][] union(Object... sets) {
 		List<int[]> list = new ArrayList<>();
@@ -351,7 +355,7 @@ public class ParsedIRI implements Cloneable, Serializable {
 				appendAscii(sb, userInfo);
 				sb.append('@');
 			}
-			if (host.length() > 0) {
+			if (!host.isEmpty()) {
 				sb.append(IDN.toASCII(host, IDN.ALLOW_UNASSIGNED));
 			}
 			if (port >= 0) {
@@ -512,7 +516,7 @@ public class ParsedIRI implements Cloneable, Serializable {
 		boolean localhost = isScheme("file") && userInfo == null && -1 == port
 				&& ("".equals(host) || "localhost".equals(host));
 		String _host = localhost ? null
-				: host == null || host.length() == 0 ? host
+				: host == null || host.isEmpty() ? host
 						: IDN.toUnicode(pctEncodingNormalization(toLowerCase(host)),
 								IDN.USE_STD3_ASCII_RULES | IDN.ALLOW_UNASSIGNED);
 		String _path = _scheme != null && path == null ? "" : normalizePath(path);
@@ -530,10 +534,10 @@ public class ParsedIRI implements Cloneable, Serializable {
 	/**
 	 * Resolves the given IRI against this ParsedIRI.
 	 *
-	 * @see #resolve(ParsedIRI)
 	 * @param iri The IRI to be resolved against this ParsedIRI
 	 * @return The resulting IRI
 	 * @throws NullPointerException If {@code relative} is {@code null}
+	 * @see #resolve(ParsedIRI)
 	 */
 	public String resolve(String iri) {
 		return resolve(ParsedIRI.create(iri)).toString();
@@ -577,14 +581,14 @@ public class ParsedIRI implements Cloneable, Serializable {
 		// relURI._scheme == null
 
 		// RFC, step 2:
-		if (relative.getHost() == null && relative.getQuery() == null && relative.getPath().length() == 0) {
+		if (relative.getHost() == null && relative.getQuery() == null && relative.getPath().isEmpty()) {
 
 			// Inherit any fragment identifier from relURI
 			String fragment = relative.getFragment();
 
 			return new ParsedIRI(this.getScheme(), this.getUserInfo(), this.getHost(), this.getPort(), this.getPath(),
 					this.getQuery(), fragment);
-		} else if (relative.getHost() == null && relative.getPath().length() == 0) {
+		} else if (relative.getHost() == null && relative.getPath().isEmpty()) {
 
 			// Inherit any query or fragment from relURI
 			String query = relative.getQuery();
@@ -632,7 +636,7 @@ public class ParsedIRI implements Cloneable, Serializable {
 						path = path.substring(0, lastSlashIdx + 1);
 					}
 
-					if (path.length() == 0) {
+					if (path.isEmpty()) {
 						// No path means: start at root.
 						path = "/";
 					}
@@ -656,10 +660,10 @@ public class ParsedIRI implements Cloneable, Serializable {
 	/**
 	 * Relativizes the given IRI against this ParsedIRI.
 	 *
-	 * @see #relativize(ParsedIRI)
 	 * @param iri The IRI to be relativized against this ParsedIRI
 	 * @return The resulting IRI
 	 * @throws NullPointerException If {@code absolute} is {@code null}
+	 * @see #relativize(ParsedIRI)
 	 */
 	public String relativize(String iri) {
 		return relativize(ParsedIRI.create(iri)).toString();
@@ -778,7 +782,7 @@ public class ParsedIRI implements Cloneable, Serializable {
 			if (':' == peek()) {
 				advance(1);
 				String p = parseMember(DIGIT, '/');
-				if (p.length() > 0) {
+				if (!p.isEmpty()) {
 					port = Integer.parseInt(p);
 				} else {
 					port = -1;
@@ -1097,7 +1101,7 @@ public class ParsedIRI implements Cloneable, Serializable {
 	}
 
 	private String pctEncodingNormalization(String path) {
-		if (path == null || path.length() == 0 || path.indexOf('%') < 0) {
+		if (path == null || path.isEmpty() || path.indexOf('%') < 0) {
 			return path; // no pct encodings
 		}
 		String[] encodings = listPctEncodings(path);

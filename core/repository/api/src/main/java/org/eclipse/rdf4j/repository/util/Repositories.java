@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.repository.util;
 
@@ -303,7 +306,7 @@ public final class Repositories {
 			QueryEvaluationException {
 		return get(repository, conn -> {
 			TupleQuery preparedQuery = conn.prepareTupleQuery(QueryLanguage.SPARQL, query);
-			try (TupleQueryResult queryResult = preparedQuery.evaluate();) {
+			try (TupleQueryResult queryResult = preparedQuery.evaluate()) {
 				return processFunction.apply(queryResult);
 			}
 		});
@@ -330,7 +333,7 @@ public final class Repositories {
 			MalformedQueryException, QueryEvaluationException {
 		return getNoTransaction(repository, conn -> {
 			TupleQuery preparedQuery = conn.prepareTupleQuery(QueryLanguage.SPARQL, query);
-			try (TupleQueryResult queryResult = preparedQuery.evaluate();) {
+			try (TupleQueryResult queryResult = preparedQuery.evaluate()) {
 				return processFunction.apply(queryResult);
 			}
 		});
@@ -401,7 +404,7 @@ public final class Repositories {
 			QueryEvaluationException {
 		return get(repository, conn -> {
 			GraphQuery preparedQuery = conn.prepareGraphQuery(QueryLanguage.SPARQL, query);
-			try (GraphQueryResult queryResult = preparedQuery.evaluate();) {
+			try (GraphQueryResult queryResult = preparedQuery.evaluate()) {
 				return processFunction.apply(queryResult);
 			}
 		});
@@ -428,7 +431,7 @@ public final class Repositories {
 			MalformedQueryException, QueryEvaluationException {
 		return getNoTransaction(repository, conn -> {
 			GraphQuery preparedQuery = conn.prepareGraphQuery(QueryLanguage.SPARQL, query);
-			try (GraphQueryResult queryResult = preparedQuery.evaluate();) {
+			try (GraphQueryResult queryResult = preparedQuery.evaluate()) {
 				return processFunction.apply(queryResult);
 			}
 		});

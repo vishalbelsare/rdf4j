@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.federated.evaluation.iterator;
 
@@ -13,7 +16,6 @@ import java.util.Set;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.common.iteration.ConvertingIteration;
 import org.eclipse.rdf4j.common.iteration.EmptyIteration;
-import org.eclipse.rdf4j.common.iteration.Iteration;
 import org.eclipse.rdf4j.federated.algebra.StatementSource;
 import org.eclipse.rdf4j.federated.algebra.StatementSource.StatementSourceType;
 import org.eclipse.rdf4j.federated.algebra.StatementSourcePattern;
@@ -42,7 +44,7 @@ public class FederatedDescribeIteration extends DescribeIteration {
 
 	private final List<StatementSource> allSources;
 
-	public FederatedDescribeIteration(Iteration<BindingSet, QueryEvaluationException> sourceIter,
+	public FederatedDescribeIteration(CloseableIteration<BindingSet> sourceIter,
 			FederationEvalStrategy strategy, Set<String> describeExprNames, BindingSet parentBindings,
 			QueryInfo queryInfo) {
 		super(sourceIter, strategy, describeExprNames, parentBindings);
@@ -56,7 +58,7 @@ public class FederatedDescribeIteration extends DescribeIteration {
 	}
 
 	@Override
-	protected CloseableIteration<BindingSet, QueryEvaluationException> createNextIteration(Value subject, Value object)
+	protected CloseableIteration<BindingSet> createNextIteration(Value subject, Value object)
 			throws QueryEvaluationException {
 		if (subject == null && object == null) {
 			return new EmptyIteration<>();
@@ -66,20 +68,19 @@ public class FederatedDescribeIteration extends DescribeIteration {
 		Var predVar = new Var(VARNAME_PREDICATE);
 		Var objVar = new Var(VARNAME_OBJECT, object);
 
-		StatementPattern pattern = new StatementPattern(subjVar, predVar, objVar);
-
 		// associate all federation members as sources for this pattern
 		// Note: for DESCRIBE we currently do not perform any extra source selection,
 		// i.e. we assume all members to be relevant for describing the resource
-		StatementSourcePattern stmtSourcePattern = new StatementSourcePattern(pattern, queryInfo);
-		allSources.forEach(source -> stmtSourcePattern.addStatementSource(source));
+		StatementSourcePattern stmtSourcePattern = new StatementSourcePattern(
+				new StatementPattern(subjVar, predVar, objVar), queryInfo);
+		allSources.forEach(stmtSourcePattern::addStatementSource);
 
-		CloseableIteration<BindingSet, QueryEvaluationException> res = stmtSourcePattern.evaluate(parentBindings);
+		CloseableIteration<BindingSet> res = stmtSourcePattern.evaluate(parentBindings);
 
 		// we need to make sure that subject or object are added to the binding set
 		// Note: FedX uses prepared SELECT queries to evaluate a statement pattern and
 		// thus does not add bound values to the result bindingset
-		return new ConvertingIteration<BindingSet, BindingSet, QueryEvaluationException>(res) {
+		return new ConvertingIteration<>(res) {
 
 			@Override
 			protected BindingSet convert(BindingSet sourceObject) throws QueryEvaluationException {
@@ -93,5 +94,14 @@ public class FederatedDescribeIteration extends DescribeIteration {
 				return bs;
 			}
 		};
+	}
+
+	@Override
+	protected void handleClose() throws QueryEvaluationException {
+		try {
+			super.handleClose();
+		} finally {
+			queryInfo.close();
+		}
 	}
 }

@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.spring.resultcache;
@@ -23,13 +26,13 @@ import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 
 /**
- * @since 4.0.0
  * @author Florian Kleedorfer
+ * @since 4.0.0
  */
 public class CachedTupleQueryResult implements TupleQueryResult {
-	private List<BindingSet> bindingSets;
+	private final List<BindingSet> bindingSets;
 	private Iterator<BindingSet> replayingIterator;
-	private List<String> bindingNames;
+	private final List<String> bindingNames;
 
 	CachedTupleQueryResult(List<BindingSet> bindingSets, List<String> bindingNames) {
 		this.bindingSets = new LinkedList<>(bindingSets);

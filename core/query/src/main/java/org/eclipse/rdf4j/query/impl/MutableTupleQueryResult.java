@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.impl;
 
@@ -15,7 +18,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import org.eclipse.rdf4j.common.iteration.Iteration;
+import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.common.iteration.Iterations;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
@@ -70,7 +73,7 @@ public class MutableTupleQueryResult implements TupleQueryResult, Cloneable {
 	}
 
 	public <E extends Exception> MutableTupleQueryResult(Collection<String> bindingNames,
-			Iteration<? extends BindingSet, E> bindingSetIter) throws E {
+			CloseableIteration<? extends BindingSet> bindingSetIter) throws E {
 		this.bindingNames.addAll(bindingNames);
 		Iterations.addAll(bindingSetIter, this.bindingSets);
 	}

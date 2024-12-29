@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2018 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.nativerdf.btree;
 
@@ -22,6 +25,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.eclipse.rdf4j.common.io.ByteArrayUtil;
 import org.eclipse.rdf4j.common.io.NioFile;
 import org.eclipse.rdf4j.sail.SailException;
+import org.eclipse.rdf4j.sail.nativerdf.NativeStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -288,6 +292,13 @@ public class BTree implements Closeable {
 			this.blockSize = buf.getInt();
 			this.valueSize = buf.getInt();
 			this.rootNodeID = buf.getInt();
+
+			if (rootNodeID == 0 && NativeStore.SOFT_FAIL_ON_CORRUPT_DATA_AND_REPAIR_INDEXES) {
+				if (nioFile.size() > blockSize) {
+					throw new SailException("Root node ID is 0 but file is not empty. Btree may be corrupt. File: "
+							+ file.getAbsolutePath());
+				}
+			}
 
 			if (Arrays.equals(MAGIC_NUMBER, magicNumber)) {
 				if (version > FILE_FORMAT_VERSION) {
@@ -739,7 +750,7 @@ public class BTree implements Closeable {
 	}
 
 	private InsertResult insertInTree(byte[] value, int nodeID, Node node) throws IOException {
-		InsertResult insertResult = null;
+		InsertResult insertResult;
 
 		// Search value in node
 		int valueIdx = node.search(value);
@@ -1008,14 +1019,14 @@ public class BTree implements Closeable {
 		return node;
 	}
 
-	Node readRootNode() throws IOException {
+	Node readRootNode() {
 		if (rootNodeID > 0) {
 			return readNode(rootNodeID);
 		}
 		return null;
 	}
 
-	Node readNode(int id) throws IOException {
+	Node readNode(int id) {
 		if (id <= 0) {
 			throw new IllegalArgumentException("id must be larger than 0, is: " + id + " in " + getFile());
 		}
@@ -1113,5 +1124,12 @@ public class BTree implements Closeable {
 		out.println("#nodes          = " + nodeCount);
 		out.println("#values         = " + valueCount);
 		out.println("---end of BTree file---");
+	}
+
+	@Override
+	public String toString() {
+		return "BTree{" +
+				"file=" + getFile() +
+				'}';
 	}
 }

@@ -1,9 +1,12 @@
 /*******************************************************************************
- * .Copyright (c) 2020 Eclipse RDF4J contributors.
+ * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.shacl.ast.planNodes;
 
@@ -16,6 +19,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.sail.SailException;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,17 +37,15 @@ public class InnerJoin implements MultiStreamPlanNode, PlanNode {
 
 	private final PlanNode left;
 	private final PlanNode right;
-	private CloseableIteration<ValidationTuple, SailException> iterator;
+	private CloseableIteration<ValidationTuple> iterator;
 	private NotifyingPushablePlanNode joined;
 	private NotifyingPushablePlanNode discardedLeft;
 	private NotifyingPushablePlanNode discardedRight;
 
-	public InnerJoin(PlanNode left, PlanNode right) {
-		left = PlanNodeHelper.handleSorting(this, left);
-		right = PlanNodeHelper.handleSorting(this, right);
+	public InnerJoin(PlanNode left, PlanNode right, ConnectionsGroup connectionsGroup) {
+		this.left = PlanNodeHelper.handleSorting(this, left, connectionsGroup);
+		this.right = PlanNodeHelper.handleSorting(this, right, connectionsGroup);
 
-		this.left = left;
-		this.right = right;
 		// this.stackTrace = Thread.currentThread().getStackTrace();
 	}
 
@@ -90,16 +92,16 @@ public class InnerJoin implements MultiStreamPlanNode, PlanNode {
 	}
 
 	@Override
-	public CloseableIteration<? extends ValidationTuple, SailException> iterator() {
+	public CloseableIteration<? extends ValidationTuple> iterator() {
 		throw new IllegalStateException();
 	}
 
-	public CloseableIteration<ValidationTuple, SailException> internalIterator() {
+	public CloseableIteration<ValidationTuple> internalIterator() {
 
-		return new CloseableIteration<ValidationTuple, SailException>() {
+		return new CloseableIteration<ValidationTuple>() {
 
-			final CloseableIteration<? extends ValidationTuple, SailException> leftIterator = left.iterator();
-			final CloseableIteration<? extends ValidationTuple, SailException> rightIterator = right.iterator();
+			final CloseableIteration<? extends ValidationTuple> leftIterator = left.iterator();
+			final CloseableIteration<? extends ValidationTuple> rightIterator = right.iterator();
 
 			ValidationTuple next;
 			ValidationTuple nextLeft;
@@ -228,8 +230,11 @@ public class InnerJoin implements MultiStreamPlanNode, PlanNode {
 
 			@Override
 			public void close() throws SailException {
-				leftIterator.close();
-				rightIterator.close();
+				try {
+					leftIterator.close();
+				} finally {
+					rightIterator.close();
+				}
 			}
 
 			@Override
@@ -295,7 +300,7 @@ public class InnerJoin implements MultiStreamPlanNode, PlanNode {
 
 	@Override
 	public String toString() {
-		return "InnerJoin(" + left.toString() + " : " + right.toString() + ")";
+		return "InnerJoin";
 	}
 
 	private String leadingSpace() {
@@ -384,7 +389,7 @@ public class InnerJoin implements MultiStreamPlanNode, PlanNode {
 		}
 
 		@Override
-		public CloseableIteration<? extends ValidationTuple, SailException> iterator() {
+		public CloseableIteration<? extends ValidationTuple> iterator() {
 			return delegate.iterator();
 		}
 

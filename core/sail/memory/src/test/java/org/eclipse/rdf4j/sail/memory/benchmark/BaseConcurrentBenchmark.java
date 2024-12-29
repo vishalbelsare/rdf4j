@@ -1,11 +1,13 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
- *  All rights reserved. This program and the accompanying materials
- *  are made available under the terms of the Eclipse Distribution License v1.0
- *  which accompanies this distribution, and is available at
- *  http://www.eclipse.org/org/documents/edl-v10.php.
- ******************************************************************************/
-
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Distribution License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.sail.memory.benchmark;
 
 import java.io.InputStream;
@@ -13,6 +15,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.common.transaction.IsolationLevel;
@@ -106,6 +109,32 @@ public class BaseConcurrentBenchmark {
 					localConnection.close();
 				}
 			}
+		};
+	}
+
+	<T> Runnable getRunnable(CountDownLatch startSignal, T inputData,
+			Consumer<T> workload) {
+
+		return () -> {
+			try {
+				startSignal.await();
+			} catch (InterruptedException e) {
+				throw new IllegalStateException();
+			}
+			workload.accept(inputData);
+		};
+	}
+
+	<T, S> Runnable getRunnable(CountDownLatch startSignal, T inputData1,
+			S inputData2, BiConsumer<T, S> workload) {
+
+		return () -> {
+			try {
+				startSignal.await();
+			} catch (InterruptedException e) {
+				throw new IllegalStateException();
+			}
+			workload.accept(inputData1, inputData2);
 		};
 	}
 

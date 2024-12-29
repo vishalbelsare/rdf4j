@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.testsuite.rio.turtle;
 
@@ -44,31 +47,31 @@ public abstract class TurtleParserTestCase {
 	/**
 	 * Base directory for W3C Turtle tests
 	 */
-	private static String TEST_W3C_FILE_BASE_PATH = "/testcases/turtle/tests-ttl-w3c-20170126/";
+	private static final String TEST_W3C_FILE_BASE_PATH = "/testcases/turtle/tests-ttl-w3c-20170126/";
 
-	private static String TEST_W3C_MANIFEST_URL = TEST_W3C_FILE_BASE_PATH + "manifest.ttl";
+	private static final String TEST_W3C_MANIFEST_URL = TEST_W3C_FILE_BASE_PATH + "manifest.ttl";
 
-	private static String TEST_W3C_MANIFEST_URI_BASE = "http://www.w3.org/2013/TurtleTests/manifest.ttl#";
+	private static final String TEST_W3C_MANIFEST_URI_BASE = "http://www.w3.org/2013/TurtleTests/manifest.ttl#";
 
-	private static String TEST_W3C_TEST_URI_BASE = "http://www.w3.org/2013/TurtleTests/";
+	private static final String TEST_W3C_TEST_URI_BASE = "http://www.w3.org/2013/TurtleTests/";
 
-	private static String NTRIPLES_TEST_URL = "http://www.w3.org/2000/10/rdf-tests/rdfcore/ntriples/test.nt";
+	private static final String NTRIPLES_TEST_URL = "http://www.w3.org/2000/10/rdf-tests/rdfcore/ntriples/test.nt";
 
-	private static String NTRIPLES_TEST_FILE = "/testcases/ntriples/test.nt";
+	private static final String NTRIPLES_TEST_FILE = "/testcases/ntriples/test.nt";
 
 	/**
 	 * Base directory for N-Triples compatibility tests that are part of the Turtle test-suite.
 	 */
-	private static String TURTLE_NTRIPLES_FILE_BASE_PATH = "/testcases/turtle/tests-nt/";
+	private static final String TURTLE_NTRIPLES_FILE_BASE_PATH = "/testcases/turtle/tests-nt/";
 
 	/**
 	 * Manifest for N-Triples compatibility tests that are part of the Turtle test-suite.
 	 */
-	private static String TURTLE_NTRIPLES_MANIFEST_URL = "/testcases/turtle/tests-nt/manifest.ttl";
+	private static final String TURTLE_NTRIPLES_MANIFEST_URL = "/testcases/turtle/tests-nt/manifest.ttl";
 
-	private static String TURTLE_NTRIPLES_MANIFEST_URI_BASE = "https://dvcs.w3.org/hg/rdf/raw-file/default/rdf-turtle/tests-nt/manifest.ttl#";
+	private static final String TURTLE_NTRIPLES_MANIFEST_URI_BASE = "https://dvcs.w3.org/hg/rdf/raw-file/default/rdf-turtle/tests-nt/manifest.ttl#";
 
-	private static String TURTLE_NTRIPLES_TEST_URI_BASE = "https://dvcs.w3.org/hg/rdf/raw-file/default/rdf-turtle/tests-nt/";
+	private static final String TURTLE_NTRIPLES_TEST_URI_BASE = "https://dvcs.w3.org/hg/rdf/raw-file/default/rdf-turtle/tests-nt/";
 
 	/*--------------------*
 	 * Static initializer *
@@ -99,7 +102,7 @@ public abstract class TurtleParserTestCase {
 	}
 
 	private void parsePositiveTurtleSyntaxTests(TestSuite suite, String fileBasePath, String testBaseUrl,
-			String testLocationBaseUri, RepositoryConnection con) throws Exception {
+			String testLocationBaseUri, RepositoryConnection con) {
 		StringBuilder positiveQuery = new StringBuilder();
 		positiveQuery.append(" PREFIX mf:   <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#>\n");
 		positiveQuery.append(" PREFIX qt:   <http://www.w3.org/2001/sw/DataAccess/tests/test-query#>\n");
@@ -132,7 +135,7 @@ public abstract class TurtleParserTestCase {
 	}
 
 	private void parseNegativeTurtleSyntaxTests(TestSuite suite, String fileBasePath, String testBaseUrl,
-			String manifestBaseUrl, RepositoryConnection con) throws Exception {
+			String manifestBaseUrl, RepositoryConnection con) {
 		StringBuilder negativeQuery = new StringBuilder();
 		negativeQuery.append(" PREFIX mf:   <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#>\n");
 		negativeQuery.append(" PREFIX qt:   <http://www.w3.org/2001/sw/DataAccess/tests/test-query#>\n");
@@ -165,7 +168,7 @@ public abstract class TurtleParserTestCase {
 	}
 
 	private void parsePositiveTurtleEvalTests(TestSuite suite, String fileBasePath, String testBaseUrl,
-			String manifestBaseUrl, RepositoryConnection con) throws Exception {
+			String manifestBaseUrl, RepositoryConnection con) {
 		StringBuilder positiveEvalQuery = new StringBuilder();
 		positiveEvalQuery.append(" PREFIX mf:   <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#>\n");
 		positiveEvalQuery.append(" PREFIX qt:   <http://www.w3.org/2001/sw/DataAccess/tests/test-query#>\n");
@@ -194,7 +197,7 @@ public abstract class TurtleParserTestCase {
 			String nextBaseUrl = testBaseUrl + nextTestFile;
 
 			// if (nextTestName.contains("CARRIAGE_RETURN")) {
-			// // FIXME: Sesame seems not to preserve the CARRIAGE_RETURN character
+			// // FIXME: RDF4J seems not to preserve the CARRIAGE_RETURN character
 			// // right now
 			// System.err.println("Ignoring Turtle Positive Parser Eval Test: " + nextInputURL);
 			// continue;
@@ -208,7 +211,7 @@ public abstract class TurtleParserTestCase {
 	}
 
 	private void parseNegativeTurtleEvalTests(TestSuite suite, String fileBasePath, String testBaseUrl,
-			String manifestBaseUrl, RepositoryConnection con) throws Exception {
+			String manifestBaseUrl, RepositoryConnection con) {
 		StringBuilder negativeEvalQuery = new StringBuilder();
 		negativeEvalQuery.append(" PREFIX mf:   <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#>\n");
 		negativeEvalQuery.append(" PREFIX qt:   <http://www.w3.org/2001/sw/DataAccess/tests/test-query#>\n");
@@ -241,7 +244,7 @@ public abstract class TurtleParserTestCase {
 	}
 
 	private void parsePositiveNTriplesSyntaxTests(TestSuite suite, String fileBasePath, String testBaseUrl,
-			String manifestBaseUrl, RepositoryConnection con) throws Exception {
+			String manifestBaseUrl, RepositoryConnection con) {
 		StringBuilder positiveQuery = new StringBuilder();
 		positiveQuery.append(" PREFIX mf:   <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#>\n");
 		positiveQuery.append(" PREFIX qt:   <http://www.w3.org/2001/sw/DataAccess/tests/test-query#>\n");
@@ -274,7 +277,7 @@ public abstract class TurtleParserTestCase {
 	}
 
 	private void parseNegativeNTriplesSyntaxTests(TestSuite suite, String fileBasePath, String testBaseUrl,
-			String manifestBaseUrl, RepositoryConnection con) throws Exception {
+			String manifestBaseUrl, RepositoryConnection con) {
 		StringBuilder negativeQuery = new StringBuilder();
 		negativeQuery.append(" PREFIX mf:   <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#>\n");
 		negativeQuery.append(" PREFIX qt:   <http://www.w3.org/2001/sw/DataAccess/tests/test-query#>\n");

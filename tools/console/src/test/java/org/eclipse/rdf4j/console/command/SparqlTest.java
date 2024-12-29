@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2018 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.console.command;
 
@@ -52,13 +55,13 @@ public class SparqlTest extends AbstractCommandTest {
 	}
 
 	@Test
-	public final void testSelectError() throws IOException {
+	public final void testSelectError() {
 		cmd.executeQuery("select ?s ?p ?o where { ?s ?p ?o }", "select");
 		verify(mockConsoleIO, never()).writeError(anyString());
 	}
 
 	@Test
-	public final void testSelectMissingBindings() throws IOException {
+	public final void testSelectMissingBindings() {
 		cmd.executeQuery("select ?s ?p ?o where { ?s a foaf:Organization }", "select");
 		verify(mockConsoleIO, never()).writeError(anyString());
 	}
@@ -93,12 +96,12 @@ public class SparqlTest extends AbstractCommandTest {
 
 		assertTrue(f.exists(), "File does not exist");
 		assertTrue(f.length() > 0, "Empty file");
-		Model m = null;
+		Model m;
 		try (Reader reader = new FileReader(f)) {
 			m = Rio.parse(reader, "", RDFFormat.TURTLE);
 		}
 		assertNotNull(m);
-		assertTrue(m.size() > 0, "Empty model");
+		assertTrue(!m.isEmpty(), "Empty model");
 	}
 
 	@Test
@@ -112,16 +115,16 @@ public class SparqlTest extends AbstractCommandTest {
 
 		assertTrue(f.exists(), "File does not exist");
 		assertTrue(f.length() > 0, "Empty file");
-		Model m = null;
+		Model m;
 		try (Reader reader = new FileReader(f)) {
 			m = Rio.parse(reader, "", RDFFormat.TURTLE);
 		}
 		assertNotNull(m);
-		assertTrue(m.size() > 0, "Empty model");
+		assertTrue(!m.isEmpty(), "Empty model");
 	}
 
 	@Test
-	public final void testOutputFileWrongFormat() throws IOException {
+	public final void testOutputFileWrongFormat() {
 		File f = new File(locationFile, "out.ttl");
 
 		// SELECT should use sparql result format, not a triple file format

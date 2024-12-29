@@ -1,31 +1,34 @@
 /*******************************************************************************
  * Copyright (c) 2016 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra.evaluation.util;
 
 import static org.eclipse.rdf4j.query.algebra.MathExpr.MathOp;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.base.CoreDatatype;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author Thomas Pellissier Tanon
  */
 public class XMLDatatypeMathUtilTest {
 
-	private ValueFactory vf = SimpleValueFactory.getInstance();
+	private final ValueFactory vf = SimpleValueFactory.getInstance();
 
 	@Test
-	public void testCompute() throws Exception {
+	public void testCompute() {
 		Literal float1 = vf.createLiteral("12", XSD.INTEGER);
 		Literal float2 = vf.createLiteral("2", CoreDatatype.XSD.INTEGER);
 		Literal duration1 = vf.createLiteral("P1Y1M", XSD.YEARMONTHDURATION);
@@ -51,7 +54,7 @@ public class XMLDatatypeMathUtilTest {
 		assertComputeEquals(vf.createLiteral("2013-11", XSD.GYEARMONTH), duration1, yearMonth1, MathOp.PLUS);
 	}
 
-	private void assertComputeEquals(Literal result, Literal lit1, Literal lit2, MathOp op) throws Exception {
+	private void assertComputeEquals(Literal result, Literal lit1, Literal lit2, MathOp op) {
 		assertEquals(result, XMLDatatypeMathUtil.compute(lit1, lit2, op));
 	}
 }

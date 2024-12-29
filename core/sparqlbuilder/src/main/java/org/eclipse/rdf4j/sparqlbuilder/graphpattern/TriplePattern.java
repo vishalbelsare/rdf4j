@@ -1,9 +1,12 @@
 /*******************************************************************************
- Copyright (c) 2018 Eclipse RDF4J contributors.
- All rights reserved. This program and the accompanying materials
- are made available under the terms of the Eclipse Distribution License v1.0
- which accompanies this distribution, and is available at
- http://www.eclipse.org/org/documents/edl-v10.php.
+ * Copyright (c) 2018 Eclipse RDF4J contributors.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Distribution License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sparqlbuilder.graphpattern;
@@ -35,7 +38,6 @@ public interface TriplePattern extends GraphPattern {
 	 *
 	 * @param predicate the predicate to use to describe this triple pattern's subject
 	 * @param objects   the corresponding object(s)
-	 *
 	 * @return this triple pattern
 	 */
 	default TriplePattern andHas(RdfPredicate predicate, RdfObject... objects) {
@@ -47,7 +49,6 @@ public interface TriplePattern extends GraphPattern {
 	 *
 	 * @param predicate the predicate to use to describe this triple pattern's subject
 	 * @param objects   the corresponding object(s)
-	 *
 	 * @return this triple pattern
 	 */
 	default TriplePattern andHas(IRI predicate, RdfObject... objects) {
@@ -58,7 +59,6 @@ public interface TriplePattern extends GraphPattern {
 	 * Add predicate-object lists describing this triple pattern's subject
 	 *
 	 * @param lists the {@link RdfPredicateObjectList}(s) to add
-	 *
 	 * @return this triple pattern
 	 */
 	TriplePattern andHas(RdfPredicateObjectList... lists);
@@ -69,7 +69,6 @@ public interface TriplePattern extends GraphPattern {
 	 *
 	 * @param predicate the predicate to use to describe this triple pattern's subject
 	 * @param objects   the corresponding object(s)
-	 *
 	 * @return this triple pattern
 	 */
 	default TriplePattern andHas(RdfPredicate predicate, Value... objects) {
@@ -82,7 +81,6 @@ public interface TriplePattern extends GraphPattern {
 	 *
 	 * @param predicate the predicate to use to describe this triple pattern's subject
 	 * @param objects   the corresponding object(s)
-	 *
 	 * @return this triple pattern
 	 */
 	default TriplePattern andHas(RdfPredicate predicate, String... objects) {
@@ -95,14 +93,11 @@ public interface TriplePattern extends GraphPattern {
 	 *
 	 * @param predicate the predicate to use to describe this triple pattern's subject
 	 * @param objects   the corresponding object(s)
-	 *
 	 * @return this triple pattern
 	 */
 	default TriplePattern andHas(IRI predicate, String... objects) {
 		return andHas(Rdf.iri(predicate), objects);
 	}
-
-	;
 
 	/**
 	 * Convenience version of {@link #andHas(RdfPredicate, RdfObject...)} that takes Boolean and converts them to
@@ -110,7 +105,6 @@ public interface TriplePattern extends GraphPattern {
 	 *
 	 * @param predicate the predicate to use to describe this triple pattern's subject
 	 * @param objects   the corresponding object(s)
-	 *
 	 * @return this triple pattern
 	 */
 	default TriplePattern andHas(RdfPredicate predicate, Boolean... objects) {
@@ -123,14 +117,11 @@ public interface TriplePattern extends GraphPattern {
 	 *
 	 * @param predicate the predicate to use to describe this triple pattern's subject
 	 * @param objects   the corresponding object(s)
-	 *
 	 * @return this triple pattern
 	 */
 	default TriplePattern andHas(IRI predicate, Boolean... objects) {
 		return andHas(Rdf.iri(predicate), objects);
 	}
-
-	;
 
 	/**
 	 * Convenience version of {@link #andHas(RdfPredicate, RdfObject...)} that takes Numbers and converts them to
@@ -138,7 +129,6 @@ public interface TriplePattern extends GraphPattern {
 	 *
 	 * @param predicate the predicate to use to describe this triple pattern's subject
 	 * @param objects   the corresponding object(s)
-	 *
 	 * @return this triple pattern
 	 */
 	default TriplePattern andHas(RdfPredicate predicate, Number... objects) {
@@ -151,14 +141,11 @@ public interface TriplePattern extends GraphPattern {
 	 *
 	 * @param predicate the predicate to use to describe this triple pattern's subject
 	 * @param objects   the corresponding object(s)
-	 *
 	 * @return this triple pattern
 	 */
 	default TriplePattern andHas(IRI predicate, Number... objects) {
 		return andHas(Rdf.iri(predicate), objects);
 	}
-
-	;
 
 	/**
 	 * Add a property path with an object list describing this triple pattern's subject
@@ -166,7 +153,6 @@ public interface TriplePattern extends GraphPattern {
 	 * @param propertyPathConfigurer an object accepting an {@link EmptyPropertyPathBuilder} that configures it as
 	 *                               needed
 	 * @param objects                the corresponding object(s)
-	 *
 	 * @return this triple pattern
 	 */
 	default TriplePattern andHas(Consumer<EmptyPropertyPathBuilder> propertyPathConfigurer, RdfObject... objects) {
@@ -213,9 +199,7 @@ public interface TriplePattern extends GraphPattern {
 	 * Use the built-in RDF shortcut {@code a} for {@code rdf:type} to specify the subject's type
 	 *
 	 * @param object the object describing this triple pattern's subject's {@code rdf:type}
-	 *
 	 * @return this triple pattern
-	 *
 	 * @see <a href="https://www.w3.org/TR/2013/REC-sparql11-query-20130321/#abbrevRdfType"> RDF Type abbreviation</a>
 	 */
 	default TriplePattern andIsA(RdfObject object) {

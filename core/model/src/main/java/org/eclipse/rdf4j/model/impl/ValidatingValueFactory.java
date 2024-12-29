@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2017 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.model.impl;
 
@@ -66,7 +69,7 @@ public class ValidatingValueFactory implements ValueFactory {
 	public IRI createIRI(String iri) {
 		try {
 			if (!new ParsedIRI(iri).isAbsolute()) {
-				throw new IllegalArgumentException("IRI must be absolute");
+				throw new IllegalArgumentException("IRI must be absolute: " + iri);
 			}
 			return delegate.createIRI(iri);
 		} catch (URISyntaxException e) {
@@ -91,7 +94,7 @@ public class ValidatingValueFactory implements ValueFactory {
 
 	@Override
 	public BNode createBNode(String nodeID) {
-		if (nodeID.length() < 1) {
+		if (nodeID.isEmpty()) {
 			throw new IllegalArgumentException("Blank node ID cannot be empty");
 		}
 		if (!isMember(PN_CHARS_U, nodeID.codePointAt(0))) {

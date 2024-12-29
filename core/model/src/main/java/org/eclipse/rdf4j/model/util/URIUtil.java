@@ -1,16 +1,18 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.model.util;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -28,15 +30,13 @@ public class URIUtil {
 	 * URI component would conflict with the reserved purpose, then the conflicting data must be escaped before forming
 	 * the URI. http://www.isi.edu/in-notes/rfc2396.txt section 2.2.
 	 */
-	private static final Set<Character> reserved = new HashSet<>(
-			Arrays.asList(new Character[] { ';', '/', '?', ':', '@', '&', '=', '+', '$', ',' }));
+	private static final Set<Character> reserved = Set.of(';', '/', '?', ':', '@', '&', '=', '+', '$', ',');
 
 	/**
 	 * Punctuation mark characters, which are part of the set of unreserved chars and therefore allowed to occur in
 	 * unescaped form. See http://www.isi.edu/in-notes/rfc2396.txt
 	 */
-	private static final Set<Character> mark = new HashSet<>(
-			Arrays.asList(new Character[] { '-', '_', '.', '!', '~', '*', '\'', '(', ')' }));
+	private static final Set<Character> mark = Set.of('-', '_', '.', '!', '~', '*', '\'', '(', ')');
 
 	/**
 	 * Regular expression pattern for matching unicode control characters.
@@ -97,7 +97,7 @@ public class URIUtil {
 		assert namespace != null : "namespace must not be null";
 		assert localName != null : "localName must not be null";
 
-		if (namespace.length() == 0) {
+		if (namespace.isEmpty()) {
 			return false;
 		}
 
@@ -213,7 +213,7 @@ public class URIUtil {
 	 */
 	public static boolean isValidLocalName(String name) {
 		// Empty names are legal
-		if (name.length() == 0) {
+		if (name.isEmpty()) {
 			return true;
 		}
 
@@ -228,6 +228,19 @@ public class URIUtil {
 
 		for (int i = 1; i < name.length(); i++) {
 			if (!isNameChar(name.charAt(i))) {
+
+				// PLX
+				if (name.charAt(i) == '%') {
+					continue;
+				} else if (name.charAt(i) == '\\') {
+					if (i + 1 < name.length() && isPN_LOCAL_ESC(name.substring(i, i + 2))) {
+						i++;
+						continue;
+					} else {
+						return false;
+					}
+				}
+
 				return false;
 			}
 
@@ -341,7 +354,7 @@ public class URIUtil {
 	 * @return <code>true</code> if the supplied code point represents a valid name char, <code>false</code> otherwise.
 	 */
 	private static boolean isNameChar(int codePoint) {
-		return isPN_CHARS(codePoint) || codePoint == '.' || codePoint == ':' | codePoint == '\\' || codePoint == '%';
+		return isPN_CHARS(codePoint) || codePoint == '.' || codePoint == ':';
 	}
 
 	/**

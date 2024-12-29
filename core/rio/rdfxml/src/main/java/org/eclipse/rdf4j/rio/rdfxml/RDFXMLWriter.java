@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.rio.rdfxml;
 
@@ -31,7 +34,6 @@ import org.eclipse.rdf4j.model.util.Literals;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.RioSetting;
 import org.eclipse.rdf4j.rio.WriterConfig;
 import org.eclipse.rdf4j.rio.helpers.AbstractRDFWriter;
@@ -42,7 +44,7 @@ import org.eclipse.rdf4j.rio.helpers.XMLWriterSettings;
 /**
  * An implementation of the RDFWriter interface that writes RDF documents in XML-serialized RDF format.
  */
-public class RDFXMLWriter extends AbstractRDFWriter implements RDFWriter, CharSink {
+public class RDFXMLWriter extends AbstractRDFWriter implements CharSink {
 
 	protected final ParsedIRI baseIRI;
 	protected final Writer writer;
@@ -104,6 +106,7 @@ public class RDFXMLWriter extends AbstractRDFWriter implements RDFWriter, CharSi
 		return writer;
 	}
 
+	@Override
 	public Collection<RioSetting<?>> getSupportedSettings() {
 		final Collection<RioSetting<?>> settings = new HashSet<>(super.getSupportedSettings());
 		settings.add(BasicWriterSettings.BASE_DIRECTIVE);

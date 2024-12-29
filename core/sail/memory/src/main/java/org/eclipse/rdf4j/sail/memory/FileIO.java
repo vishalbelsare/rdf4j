@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.memory;
 
@@ -32,6 +35,7 @@ import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Namespace;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Triple;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.util.Literals;
@@ -42,6 +46,7 @@ import org.eclipse.rdf4j.sail.base.SailSink;
 import org.eclipse.rdf4j.sail.memory.model.MemIRI;
 import org.eclipse.rdf4j.sail.memory.model.MemResource;
 import org.eclipse.rdf4j.sail.memory.model.MemValue;
+import org.eclipse.rdf4j.sail.memory.model.MemValueFactory;
 
 /**
  * Functionality to read and write MemoryStore to/from a file.
@@ -54,10 +59,14 @@ class FileIO {
 	 * Constants *
 	 *-----------*/
 
-	/** Magic number for Binary Memory Store Files */
+	/**
+	 * Magic number for Binary Memory Store Files
+	 */
 	private static final byte[] MAGIC_NUMBER = new byte[] { 'B', 'M', 'S', 'F' };
 
-	/** The version number of the current format. */
+	/**
+	 * The version number of the current format.
+	 */
 	// Version 1: initial version
 	// Version 2: don't use read/writeUTF() to remove 64k limit on strings,
 	// removed dummy "up-to-date status" boolean for namespace records
@@ -93,7 +102,7 @@ class FileIO {
 	 * Variables *
 	 *-----------*/
 
-	private final ValueFactory vf;
+	private final MemValueFactory vf;
 
 	private final CharsetEncoder charsetEncoder = StandardCharsets.UTF_8.newEncoder();
 
@@ -105,7 +114,7 @@ class FileIO {
 	 * Constructors *
 	 *--------------*/
 
-	public FileIO(ValueFactory vf) {
+	public FileIO(MemValueFactory vf) {
 		this.vf = vf;
 	}
 
@@ -142,7 +151,7 @@ class FileIO {
 			out.write(BMSF_VERSION);
 			out.flush();
 			// The rest of the data is GZIP-compressed
-			try (DataOutputStream dataOut = new DataOutputStream(new GZIPOutputStream(out));) {
+			try (DataOutputStream dataOut = new DataOutputStream(new GZIPOutputStream(out))) {
 				writeNamespaces(explicit, dataOut);
 				writeStatements(explicit, inferred, dataOut);
 
@@ -165,7 +174,7 @@ class FileIO {
 			}
 
 			// The rest of the data is GZIP-compressed
-			try (DataInputStream dataIn = new DataInputStream(new GZIPInputStream(in));) {
+			try (DataInputStream dataIn = new DataInputStream(new GZIPInputStream(in))) {
 				int recordTypeMarker;
 				while ((recordTypeMarker = dataIn.readByte()) != EOF_MARKER) {
 					switch (recordTypeMarker) {
@@ -193,7 +202,7 @@ class FileIO {
 	}
 
 	private void writeNamespaces(SailDataset store, DataOutputStream dataOut) throws IOException, SailException {
-		try (CloseableIteration<? extends Namespace, SailException> iter = store.getNamespaces();) {
+		try (CloseableIteration<? extends Namespace> iter = store.getNamespaces()) {
 			while (iter.hasNext()) {
 				Namespace ns = iter.next();
 				dataOut.writeByte(NAMESPACE_MARKER);
@@ -223,9 +232,9 @@ class FileIO {
 		writeStatement(inferred.getStatements(null, null, null), INF_TRIPLE_MARKER, INF_QUAD_MARKER, dataOut);
 	}
 
-	public void writeStatement(CloseableIteration<? extends Statement, SailException> stIter, int tripleMarker,
+	public void writeStatement(CloseableIteration<? extends Statement> stIter, int tripleMarker,
 			int quadMarker, DataOutputStream dataOut) throws IOException, SailException {
-		try {
+		try (stIter) {
 			while (stIter.hasNext()) {
 				Statement st = stIter.next();
 				Resource context = st.getContext();
@@ -241,8 +250,6 @@ class FileIO {
 					writeValue(context, dataOut);
 				}
 			}
-		} finally {
-			stIter.close();
 		}
 	}
 
@@ -315,7 +322,8 @@ class FileIO {
 			return vf.createLiteral(label, datatype);
 		} else if (valueTypeMarker == RDFSTAR_TRIPLE_MARKER) {
 			IRI rdfStarEncodedTriple = (IRI) readValue(dataIn);
-			return RDFStarUtil.fromRDFEncodedValue(rdfStarEncodedTriple);
+			Triple triple = (Triple) RDFStarUtil.fromRDFEncodedValue(rdfStarEncodedTriple, vf);
+			return vf.getOrCreateMemTriple(triple);
 		} else {
 			throw new IOException("Invalid value type marker: " + valueTypeMarker);
 		}

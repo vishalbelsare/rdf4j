@@ -1,19 +1,24 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra.evaluation.impl;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import org.eclipse.rdf4j.common.annotation.Experimental;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
@@ -31,6 +36,11 @@ import org.eclipse.rdf4j.query.algebra.evaluation.QueryBindingSet;
  * evaluation.
  */
 public interface QueryEvaluationContext {
+
+	@Experimental
+	default Comparator<Value> getComparator() {
+		return null;
+	}
 
 	class Minimal implements QueryEvaluationContext {
 
@@ -51,7 +61,23 @@ public interface QueryEvaluationContext {
 		// this field is volatile, as a precaution in case we call it directly.
 		private volatile Literal now;
 		private final Dataset dataset;
-		private final ValueFactory vf;
+		private final ValueFactory valueFactory;
+		private final Comparator<Value> comparator;
+
+		/**
+		 * Set the shared now value to a preexisting object
+		 *
+		 * @param now        that is shared.
+		 * @param dataset    that a query should use to evaluate
+		 * @param comparator to use for ordering
+		 */
+		public Minimal(Literal now, Dataset dataset, Comparator<Value> comparator) {
+			super();
+			this.now = now;
+			this.dataset = dataset;
+			this.valueFactory = SimpleValueFactory.getInstance();
+			this.comparator = comparator;
+		}
 
 		/**
 		 * Set the shared now value to a preexisting object
@@ -60,26 +86,47 @@ public interface QueryEvaluationContext {
 		 * @param dataset that a query should use to evaluate
 		 */
 		public Minimal(Literal now, Dataset dataset) {
-			super();
-			this.now = now;
-			this.dataset = dataset;
-			this.vf = SimpleValueFactory.getInstance();
+			this(now, dataset, null);
 		}
 
 		/**
 		 * @param dataset that a query should use to evaluate
 		 */
 		public Minimal(Dataset dataset) {
-			this.dataset = dataset;
-			this.vf = SimpleValueFactory.getInstance();
+			this(null, dataset);
 		}
 
 		/**
-		 * @param dataset that a query should use to the evaluate
+		 * @param dataset    that a query should use to evaluate
+		 * @param comparator to use for ordering
 		 */
-		public Minimal(Dataset dataset, ValueFactory vf) {
+		public Minimal(Dataset dataset, Comparator<Value> comparator) {
+			this(null, dataset, comparator);
+		}
+
+		/**
+		 * @param dataset      that a query should use to the evaluate
+		 * @param valueFactory that a query should use to the evaluate
+		 * @param comparator   to use for ordering
+		 *
+		 */
+		public Minimal(Dataset dataset, ValueFactory valueFactory, Comparator<Value> comparator) {
 			this.dataset = dataset;
-			this.vf = vf;
+			this.valueFactory = valueFactory;
+			this.comparator = comparator;
+		}
+
+		/**
+		 * @param dataset      that a query should use to the evaluate
+		 * @param valueFactory that a query should use to the evaluate
+		 */
+		public Minimal(Dataset dataset, ValueFactory valueFactory) {
+			this(dataset, valueFactory, null);
+		}
+
+		@Override
+		public Comparator<Value> getComparator() {
+			return comparator;
 		}
 
 		@Override
@@ -89,7 +136,7 @@ public interface QueryEvaluationContext {
 			// creating a new date is expensive because it uses the XMLGregorianCalendar implementation which is very
 			// complex.
 			if (now == null) {
-				now = vf.createLiteral(new Date());
+				now = valueFactory.createLiteral(new Date());
 				boolean success = NOW.compareAndSet(this, null, now);
 				if (!success) {
 					now = (Literal) NOW.getAcquire(this);
@@ -120,16 +167,16 @@ public interface QueryEvaluationContext {
 	}
 
 	default Predicate<BindingSet> hasBinding(String variableName) {
-		return (bs) -> bs.hasBinding(variableName);
+		return bs -> bs.hasBinding(variableName);
 	}
 
 	default Function<BindingSet, Binding> getBinding(String variableName) {
-		return (bs) -> bs.getBinding(variableName);
+		return bs -> bs.getBinding(variableName);
 	}
 
 	default Function<BindingSet, Value> getValue(String variableName) {
 		Function<BindingSet, Binding> getBinding = getBinding(variableName);
-		return (bs) -> {
+		return bs -> {
 			Binding binding = getBinding.apply(bs);
 			if (binding == null) {
 				return null;

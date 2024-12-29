@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl.results.lazy;
@@ -18,7 +21,6 @@ import java.util.Set;
 import org.eclipse.rdf4j.common.annotation.InternalUseOnly;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.common.iteration.CloseableIteratorIteration;
-import org.eclipse.rdf4j.sail.SailException;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.ValidationTuple;
 import org.eclipse.rdf4j.sail.shacl.results.ValidationResult;
 
@@ -31,9 +33,9 @@ public class ValidationResultIterator implements Iterator<ValidationResult> {
 	private boolean truncated = false;
 
 	private Iterator<ValidationResult> next = Collections.emptyIterator();
-	private CloseableIteration<? extends ValidationTuple, SailException> tupleIterator;
+	private CloseableIteration<? extends ValidationTuple> tupleIterator;
 
-	public ValidationResultIterator(CloseableIteration<? extends ValidationTuple, SailException> tupleIterator,
+	public ValidationResultIterator(CloseableIteration<? extends ValidationTuple> tupleIterator,
 			long limit) {
 		this.limit = limit;
 		this.tupleIterator = tupleIterator;
@@ -66,22 +68,9 @@ public class ValidationResultIterator implements Iterator<ValidationResult> {
 				for (ValidationTuple tuple : invalidTuples) {
 					List<ValidationResult> validationResults = tuple.getValidationResult();
 
-					ValidationResult validationResult1 = validationResults.get(validationResults.size() - 1);
-					validationResultsRet.add(validationResult1);
+					assert !validationResults.isEmpty();
 
-//					ValidationResult parent = null;
-//
-//					// we iterate in reverse order to get the most recent validation result first
-//					for (int i = validationResults.size() - 1; i >= 0; i--) {
-//						ValidationResult validationResult = validationResults.get(i);
-//						if (parent == null) {
-//							parent = validationResult;
-//							validationResultsRet.add(parent);
-//						} else {
-//							parent.setDetail(validationResult);
-//							parent = validationResult;
-//						}
-//					}
+					validationResultsRet.addAll(validationResults);
 
 					counter++;
 				}

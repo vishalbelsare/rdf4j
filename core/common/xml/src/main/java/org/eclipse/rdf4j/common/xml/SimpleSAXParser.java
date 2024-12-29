@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.common.xml;
@@ -64,7 +67,7 @@ public class SimpleSAXParser {
 	/**
 	 * The XMLReader to use for parsing the XML.
 	 */
-	private XMLReader xmlReader;
+	private final XMLReader xmlReader;
 
 	/**
 	 * The listener to report the events to.
@@ -160,14 +163,8 @@ public class SimpleSAXParser {
 	 * @param file The file containing the XML to parse.
 	 */
 	public void parse(File file) throws SAXException, IOException {
-		InputStream in = new FileInputStream(file);
-		try {
+		try (InputStream in = new FileInputStream(file)) {
 			parse(in);
-		} finally {
-			try {
-				in.close();
-			} catch (IOException ignore) {
-			}
 		}
 	}
 
@@ -210,7 +207,7 @@ public class SimpleSAXParser {
 		/**
 		 * StringBuilder used to collect text during parsing.
 		 */
-		private StringBuilder charBuf = new StringBuilder(512);
+		private final StringBuilder charBuf = new StringBuilder(512);
 
 		/**
 		 * The tag name of a deferred start tag.

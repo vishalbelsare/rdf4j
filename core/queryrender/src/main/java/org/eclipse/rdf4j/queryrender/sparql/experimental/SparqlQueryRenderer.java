@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.queryrender.sparql.experimental;
 
@@ -29,7 +32,6 @@ import org.eclipse.rdf4j.queryrender.sparql.SPARQLQueryRenderer;
  * @author Andriy Nikolov
  * @author Jeen Broekstra
  * @author Andreas Schwarte
- * 
  * @apiNote This feature is in an experimental state: its existence, signature or behavior may change without warning
  *          from one release to the next.
  */
@@ -45,7 +47,7 @@ public class SparqlQueryRenderer extends BaseTupleExprRenderer implements QueryR
 	}
 
 	@Override
-	public String render(ParsedQuery theQuery) throws Exception {
+	public String render(ParsedQuery theQuery) {
 		if (theQuery instanceof ParsedTupleQuery) {
 			ParsedQueryPreprocessor parserVisitor = new ParsedQueryPreprocessor();
 			PreprocessedQuerySerializer serializerVisitor = new PreprocessedQuerySerializer();
@@ -69,7 +71,7 @@ public class SparqlQueryRenderer extends BaseTupleExprRenderer implements QueryR
 		}
 	}
 
-	public String render(ParsedOperation theOperation) throws Exception {
+	public String render(ParsedOperation theOperation) {
 		if (theOperation instanceof ParsedQuery) {
 			return render((ParsedQuery) theOperation);
 		} else if (theOperation instanceof ParsedUpdate) {
@@ -79,7 +81,7 @@ public class SparqlQueryRenderer extends BaseTupleExprRenderer implements QueryR
 		throw new UnsupportedOperationException("Only ParsedQuery and ParsedUpdate operations are supported");
 	}
 
-	private String renderUpdate(ParsedUpdate theUpdate) throws Exception {
+	private String renderUpdate(ParsedUpdate theUpdate) {
 		StringBuilder exprBuilder = new StringBuilder();
 		boolean multipleExpressions = (theUpdate.getUpdateExprs().size() > 1);
 
@@ -97,7 +99,7 @@ public class SparqlQueryRenderer extends BaseTupleExprRenderer implements QueryR
 	}
 
 	@Override
-	public String render(TupleExpr theExpr) throws Exception {
+	public String render(TupleExpr theExpr) {
 		ParsedQueryPreprocessor parserVisitor = new ParsedQueryPreprocessor();
 		PreprocessedQuerySerializer serializerVisitor = new PreprocessedQuerySerializer();
 		SerializableParsedTupleQuery toSerialize = parserVisitor.transformToSerialize(theExpr);
@@ -105,7 +107,7 @@ public class SparqlQueryRenderer extends BaseTupleExprRenderer implements QueryR
 	}
 
 	@Override
-	public String renderValueExpr(ValueExpr theExpr) throws Exception {
+	public String renderValueExpr(ValueExpr theExpr) {
 		PreprocessedQuerySerializer serializerVisitor = new PreprocessedQuerySerializer();
 		theExpr.visit(serializerVisitor);
 		return serializerVisitor.builder.toString();

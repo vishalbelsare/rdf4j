@@ -1,10 +1,13 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
- ******************************************************************************/
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 
 package org.eclipse.rdf4j.http.server.repository.handler;
 
@@ -55,6 +58,7 @@ public abstract class AbstractQueryRequestHandler implements QueryRequestHandler
 			HttpServletResponse response) throws HTTPException, IOException {
 
 		RepositoryConnection repositoryCon = null;
+		Object queryResponse = null;
 
 		try {
 			Repository repository = repositoryResolver.getRepository(request);
@@ -72,9 +76,6 @@ public abstract class AbstractQueryRequestHandler implements QueryRequestHandler
 			boolean distinct = isDistinct(request);
 
 			try {
-
-				Object queryResponse;
-
 				if (headersOnly) {
 					queryResponse = null;
 				} else {
@@ -111,10 +112,22 @@ public abstract class AbstractQueryRequestHandler implements QueryRequestHandler
 			}
 
 		} catch (Exception e) {
-			// only close the connection when an exception occurs. Otherwise, the QueryResultView will take care of
-			// closing it.
-			if (repositoryCon != null) {
-				repositoryCon.close();
+			// only close the response & connection when an exception occurs. Otherwise, the QueryResultView will take
+			// care of closing it.
+			try {
+				if (queryResponse instanceof AutoCloseable) {
+					((AutoCloseable) queryResponse).close();
+				}
+			} catch (Exception qre) {
+				logger.warn("Query response closing error", qre);
+			} finally {
+				try {
+					if (repositoryCon != null) {
+						repositoryCon.close();
+					}
+				} catch (Exception qre) {
+					logger.warn("Connection closing error", qre);
+				}
 			}
 			throw e;
 		}

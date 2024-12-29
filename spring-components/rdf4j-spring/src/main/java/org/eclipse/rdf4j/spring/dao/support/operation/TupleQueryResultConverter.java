@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.spring.dao.support.operation;
@@ -25,6 +28,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.eclipse.rdf4j.common.exception.RDF4JException;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.spring.dao.support.BindingSetMapper;
@@ -34,8 +38,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @since 4.0.0
  * @author Florian Kleedorfer
+ * @since 4.0.0
  */
 public class TupleQueryResultConverter {
 	private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
@@ -53,8 +57,10 @@ public class TupleQueryResultConverter {
 		try {
 			consumer.accept(tupleQueryResult);
 		} catch (Exception e) {
-			logger.debug("Caught execption while processing TupleQueryResult", e);
-			throw mapException("Error processing TupleQueryResult", e);
+			logger.debug("Caught execption while processing TupleQueryResult: {}", e.getMessage());
+			RDF4JException mapped = mapException("Error processing TupleQueryResult", e);
+			logger.debug("Re-throwing as {} ", mapped.getClass().getSimpleName());
+			throw mapped;
 		} finally {
 			tupleQueryResult.close();
 			tupleQueryResult = null;
@@ -68,8 +74,10 @@ public class TupleQueryResultConverter {
 		try {
 			return function.apply(tupleQueryResult);
 		} catch (Exception e) {
-			logger.warn("Caught execption while processing TupleQueryResult", e);
-			throw mapException("Error processing TupleQueryResult", e);
+			logger.debug("Caught execption while processing TupleQueryResult: {}", e.getMessage());
+			RDF4JException mapped = mapException("Error processing TupleQueryResult", e);
+			logger.debug("Re-throwing as {} ", mapped.getClass().getSimpleName());
+			throw mapped;
 		} finally {
 			tupleQueryResult.close();
 			tupleQueryResult = null;
@@ -110,12 +118,16 @@ public class TupleQueryResultConverter {
 		return toStreamInternal(andThenOrElseNull(mapper, postProcessor));
 	}
 
-	/** Maps the whole {@link TupleQueryResult} to one object, which may be null. */
+	/**
+	 * Maps the whole {@link TupleQueryResult} to one object, which may be null.
+	 */
 	public <T> T toSingletonMaybeOfWholeResult(TupleQueryResultMapper<T> mapper) {
 		return applyToResult(mapper);
 	}
 
-	/** Maps the whole {@link TupleQueryResult} to one {@link Optional}. */
+	/**
+	 * Maps the whole {@link TupleQueryResult} to one {@link Optional}.
+	 */
 	public <T> Optional<T> toSingletonOptionalOfWholeResult(TupleQueryResultMapper<T> mapper) {
 		return Optional.ofNullable(toSingletonMaybeOfWholeResult(mapper));
 	}
@@ -191,23 +203,31 @@ public class TupleQueryResultConverter {
 						.collect(collector));
 	}
 
-	/** Maps the query result to a {@link List}. */
+	/**
+	 * Maps the query result to a {@link List}.
+	 */
 	public <T> List<T> toList(BindingSetMapper<T> mapper) {
 		return mapAndCollect(mapper, Collectors.toList());
 	}
 
-	/** Maps the query result to a {@link List}. */
+	/**
+	 * Maps the query result to a {@link List}.
+	 */
 	public <T, O> List<O> toList(
 			BindingSetMapper<T> mapper, MappingPostProcessor<T, O> postProcessor) {
 		return mapAndCollect(andThenOrElseNull(mapper, postProcessor), Collectors.toList());
 	}
 
-	/** Maps the query result to a {@link Set}. */
+	/**
+	 * Maps the query result to a {@link Set}.
+	 */
 	public <T> Set<T> toSet(BindingSetMapper<T> mapper) {
 		return mapAndCollect(mapper, Collectors.toSet());
 	}
 
-	/** Maps the query result to a {@link Set}. */
+	/**
+	 * Maps the query result to a {@link Set}.
+	 */
 	public <T, O> Set<O> toSet(
 			BindingSetMapper<T> mapper, MappingPostProcessor<T, O> postProcessor) {
 		return mapAndCollect(andThenOrElseNull(mapper, postProcessor), Collectors.toSet());
@@ -221,7 +241,9 @@ public class TupleQueryResultConverter {
 		return mapAndCollect(Function.identity(), Collectors.toMap(keyMapper, valueMapper));
 	}
 
-	/** Maps the query result to a {@link Map} of {@link Set}s. */
+	/**
+	 * Maps the query result to a {@link Map} of {@link Set}s.
+	 */
 	public <K, V> Map<K, Set<V>> toMapOfSet(
 			Function<BindingSet, K> keyMapper, Function<BindingSet, V> valueMapper) {
 		return mapAndCollect(
@@ -230,7 +252,9 @@ public class TupleQueryResultConverter {
 						keyMapper, Collectors.mapping(valueMapper, Collectors.toSet())));
 	}
 
-	/** Maps the query result to a {@link Map} of {@link List}s. */
+	/**
+	 * Maps the query result to a {@link Map} of {@link List}s.
+	 */
 	public <K, V> Map<K, List<V>> toMapOfList(
 			Function<BindingSet, K> keyMapper, Function<BindingSet, V> valueMapper) {
 		return mapAndCollect(
@@ -258,14 +282,18 @@ public class TupleQueryResultConverter {
 						bs -> entryMapper.apply(bs).getValue()));
 	}
 
-	/** Maps the query result to a {@link Map} of {@link Set}s. */
+	/**
+	 * Maps the query result to a {@link Map} of {@link Set}s.
+	 */
 	public <T, K, V> Map<K, Set<V>> toMapOfSet(
 			BindingSetMapper<T> mapper, Function<T, K> keyMapper, Function<T, V> valueMapper) {
 		return mapAndCollect(
 				mapper, Collectors.groupingBy(keyMapper, mapping(valueMapper, Collectors.toSet())));
 	}
 
-	/** Maps the query result to a {@link Map} of {@link List}s. */
+	/**
+	 * Maps the query result to a {@link Map} of {@link List}s.
+	 */
 	public <T, K, V> Map<K, List<V>> toMapOfList(
 			BindingSetMapper<T> mapper, Function<T, K> keyMapper, Function<T, V> valueMapper) {
 		return mapAndCollect(
@@ -282,7 +310,7 @@ public class TupleQueryResultConverter {
 			return Stream.empty();
 		}
 		BindingSet first = result.next();
-		if (!result.hasNext() && first.size() == 0) {
+		if (!result.hasNext() && first.isEmpty()) {
 			return Stream.empty();
 		}
 		return Stream.concat(Stream.of(first), result.stream());

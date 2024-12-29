@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra.evaluation.iterator;
 
@@ -25,19 +28,19 @@ import org.eclipse.rdf4j.query.algebra.evaluation.QueryValueEvaluationStep;
 import org.eclipse.rdf4j.query.algebra.evaluation.ValueExprEvaluationException;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.QueryEvaluationContext;
 
-public class ExtensionIterator extends ConvertingIteration<BindingSet, BindingSet, QueryEvaluationException> {
+public class ExtensionIterator extends ConvertingIteration<BindingSet, BindingSet> {
 
 	private final Consumer<MutableBindingSet> setter;
 	private final QueryEvaluationContext context;
 
-	public ExtensionIterator(Extension extension, CloseableIteration<BindingSet, QueryEvaluationException> iter,
+	public ExtensionIterator(Extension extension, CloseableIteration<BindingSet> iter,
 			EvaluationStrategy strategy, QueryEvaluationContext context) throws QueryEvaluationException {
 		super(iter);
 		this.context = context;
 		this.setter = buildLambdaToEvaluateTheExpressions(extension, strategy, context);
 	}
 
-	public ExtensionIterator(CloseableIteration<BindingSet, QueryEvaluationException> iter,
+	public ExtensionIterator(CloseableIteration<BindingSet> iter,
 			Consumer<MutableBindingSet> setter, QueryEvaluationContext context) throws QueryEvaluationException {
 		super(iter);
 		this.setter = setter;
@@ -52,11 +55,11 @@ public class ExtensionIterator extends ConvertingIteration<BindingSet, BindingSe
 			if (!(expr instanceof AggregateOperator)) {
 				QueryValueEvaluationStep prepared = strategy.precompile(extElem.getExpr(), context);
 				BiConsumer<Value, MutableBindingSet> setBinding = context.setBinding(extElem.getName());
-				consumer = andThen(consumer, (targetBindings) -> setValue(setBinding, prepared, targetBindings));
+				consumer = andThen(consumer, targetBindings -> setValue(setBinding, prepared, targetBindings));
 			}
 		}
 		if (consumer == null) {
-			return (bs) -> {
+			return bs -> {
 
 			};
 		}
@@ -86,10 +89,11 @@ public class ExtensionIterator extends ConvertingIteration<BindingSet, BindingSe
 
 	private static Consumer<MutableBindingSet> andThen(Consumer<MutableBindingSet> consumer,
 			Consumer<MutableBindingSet> next) {
-		if (consumer == null)
+		if (consumer == null) {
 			return next;
-		else
+		} else {
 			return consumer.andThen(next);
+		}
 	}
 
 	@Override

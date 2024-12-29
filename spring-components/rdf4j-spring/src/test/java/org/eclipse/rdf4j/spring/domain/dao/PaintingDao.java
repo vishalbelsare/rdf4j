@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.spring.domain.dao;
@@ -19,6 +22,7 @@ import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.sparqlbuilder.core.query.Queries;
 import org.eclipse.rdf4j.spring.dao.SimpleRDF4JCRUDDao;
+import org.eclipse.rdf4j.spring.dao.support.UpdateWithModelBuilder;
 import org.eclipse.rdf4j.spring.dao.support.bindingsBuilder.MutableBindings;
 import org.eclipse.rdf4j.spring.dao.support.sparql.NamedSparqlSupplier;
 import org.eclipse.rdf4j.spring.domain.model.EX;
@@ -28,8 +32,8 @@ import org.eclipse.rdf4j.spring.util.QueryResultUtils;
 import org.springframework.stereotype.Component;
 
 /**
- * @since 4.0.0
  * @author Florian Kleedorfer
+ * @since 4.0.0
  */
 @Component
 public class PaintingDao extends SimpleRDF4JCRUDDao<Painting, IRI> {
@@ -93,5 +97,12 @@ public class PaintingDao extends SimpleRDF4JCRUDDao<Painting, IRI> {
 			return getRdf4JTemplate().getNewUUID();
 		}
 		return painting.getId();
+	}
+
+	public void changeArtist(IRI painting, IRI newArtist) {
+		UpdateWithModelBuilder update = getRdf4JTemplate().updateWithBuilder();
+		update.remove(null, EX.creatorOf, painting);
+		update.add(newArtist, EX.creatorOf, painting);
+		update.execute();
 	}
 }

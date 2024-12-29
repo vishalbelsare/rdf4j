@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra.evaluation.impl.evaluationsteps;
 
@@ -43,14 +46,14 @@ public class ReificationRdfStarQueryEvaluationStep implements QueryEvaluationSte
 	}
 
 	@Override
-	public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(BindingSet bindings) {
+	public CloseableIteration<BindingSet> evaluate(BindingSet bindings) {
 		final Value subjValue = StrictEvaluationStrategy.getVarValue(subjVar, bindings);
 		final Value predValue = StrictEvaluationStrategy.getVarValue(predVar, bindings);
 		final Value objValue = StrictEvaluationStrategy.getVarValue(objVar, bindings);
 		final Value extValue = StrictEvaluationStrategy.getVarValue(extVar, bindings);
 		// standard reification iteration
 		// 1. walk over resources used as subjects of (x rdf:type rdf:Statement)
-		final CloseableIteration<? extends Resource, QueryEvaluationException> iter = new ConvertingIteration<Statement, Resource, QueryEvaluationException>(
+		final CloseableIteration<? extends Resource> iter = new ConvertingIteration<Statement, Resource>(
 				tripleSource.getStatements((Resource) extValue, RDF.TYPE, RDF.STATEMENT)) {
 
 			@Override
@@ -61,11 +64,9 @@ public class ReificationRdfStarQueryEvaluationStep implements QueryEvaluationSte
 		};
 		// for each reification node, fetch and check the subject, predicate and object values against
 		// the expected values from TripleRef pattern and supplied bindings collection
-		return new LookAheadIteration<BindingSet, QueryEvaluationException>() {
+		return new LookAheadIteration<>() {
 			@Override
-			protected void handleClose()
-					throws QueryEvaluationException {
-				super.handleClose();
+			protected void handleClose() throws QueryEvaluationException {
 				iter.close();
 			}
 
@@ -101,13 +102,14 @@ public class ReificationRdfStarQueryEvaluationStep implements QueryEvaluationSte
 				return null;
 			}
 
-//
+			//
 			private boolean matchValue(Resource theNode, Value value, Var var, MutableBindingSet result,
 					IRI predicate) {
-				try (CloseableIteration<? extends Statement, QueryEvaluationException> valueiter = tripleSource
+				try (CloseableIteration<? extends Statement> valueIter = tripleSource
 						.getStatements(theNode, predicate, null)) {
-					while (valueiter.hasNext()) {
-						Statement valueStatement = valueiter.next();
+
+					while (valueIter.hasNext()) {
+						Statement valueStatement = valueIter.next();
 						if (theNode.equals(valueStatement.getSubject())) {
 							if (value == null || value.equals(valueStatement.getObject())) {
 								if (value == null) {

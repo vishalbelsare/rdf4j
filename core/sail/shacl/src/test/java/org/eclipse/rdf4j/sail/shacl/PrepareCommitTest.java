@@ -1,17 +1,17 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
@@ -34,6 +34,7 @@ import org.eclipse.rdf4j.repository.sail.SailRepositoryConnection;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.sail.NotifyingSailConnection;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class PrepareCommitTest {
@@ -84,7 +85,7 @@ public class PrepareCommitTest {
 			conn.addStatement(bob, RDF.TYPE, RDFS.RESOURCE);
 
 			conn.prepare(); // should fail because bob has no label
-			fail("constraint violation not detected on prepare call");
+			Assertions.fail("constraint violation not detected on prepare call");
 		} catch (ShaclSailValidationException e) {
 			conn.rollback();
 
@@ -175,14 +176,14 @@ public class PrepareCommitTest {
 		} finally {
 			if (connection != null) {
 				// check that nothing has been rolled back yet
-				assertTrue(connection.hasStatement(bNode, RDF.TYPE, RDFS.RESOURCE, false));
+				Assertions.assertTrue(connection.hasStatement(bNode, RDF.TYPE, RDFS.RESOURCE, false));
 				connection.close();
 			}
 		}
 
 		// check that close() called rollback
 		try (NotifyingSailConnection connection1 = shaclSail.getConnection()) {
-			assertFalse(connection1.hasStatement(RDFS.RESOURCE, RDF.TYPE, RDFS.RESOURCE, false));
+			Assertions.assertFalse(connection1.hasStatement(RDFS.RESOURCE, RDF.TYPE, RDFS.RESOURCE, false));
 		}
 
 		shaclSail.shutDown();
@@ -207,19 +208,19 @@ public class PrepareCommitTest {
 		} finally {
 			if (connection != null) {
 				// check that nothing has been rolled back yet
-				assertTrue(connection.hasStatement(bNode, RDF.TYPE, RDFS.RESOURCE, false));
+				Assertions.assertTrue(connection.hasStatement(bNode, RDF.TYPE, RDFS.RESOURCE, false));
 				connection.close();
 			}
 		}
 
 		// check that close() called rollback
 		try (NotifyingSailConnection connection1 = shaclSail.getConnection()) {
-			assertFalse(connection1.hasStatement(RDFS.RESOURCE, RDF.TYPE, RDFS.RESOURCE, false));
+			Assertions.assertFalse(connection1.hasStatement(RDFS.RESOURCE, RDF.TYPE, RDFS.RESOURCE, false));
 		}
 
 		shaclSail.shutDown();
 
-		assertTrue(exception);
+		Assertions.assertTrue(exception);
 	}
 
 	@Test
@@ -241,19 +242,19 @@ public class PrepareCommitTest {
 		} finally {
 			if (connection != null) {
 				// check that nothing has been rolled back yet
-				assertTrue(connection.hasStatement(bNode, RDF.TYPE, RDFS.RESOURCE, false));
+				Assertions.assertTrue(connection.hasStatement(bNode, RDF.TYPE, RDFS.RESOURCE, false));
 				connection.close();
 			}
 		}
 
 		// check that close() called rollback
 		try (SailRepositoryConnection connection1 = shaclSail.getConnection()) {
-			assertFalse(connection1.hasStatement(RDFS.RESOURCE, RDF.TYPE, RDFS.RESOURCE, false));
+			Assertions.assertFalse(connection1.hasStatement(RDFS.RESOURCE, RDF.TYPE, RDFS.RESOURCE, false));
 		}
 
 		shaclSail.shutDown();
 
-		assertTrue(exception);
+		Assertions.assertTrue(exception);
 	}
 
 }
