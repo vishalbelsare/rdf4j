@@ -1,16 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.testsuite.repository;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -23,16 +26,22 @@ import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public abstract class SparqlAggregatesTest {
 
-	@BeforeClass
-	public static void setUpClass() throws Exception {
+	@BeforeAll
+	public static void setUpClass() {
 		System.setProperty("org.eclipse.rdf4j.repository.debug", "true");
+	}
+
+	@AfterAll
+	public static void afterClass() {
+		System.setProperty("org.eclipse.rdf4j.repository.debug", "false");
 	}
 
 	public String selectNameMbox = "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n" + "SELECT ?name ?mbox\n"
@@ -60,7 +69,7 @@ public abstract class SparqlAggregatesTest {
 	private ValueFactory vf;
 
 	@Test
-	public void testSelect() throws Exception {
+	public void testSelect() {
 		TupleQuery query = conn.prepareTupleQuery(QueryLanguage.SPARQL, selectNameMbox);
 		TupleQueryResult result = query.evaluate();
 		assertTrue(result.hasNext());
@@ -71,7 +80,7 @@ public abstract class SparqlAggregatesTest {
 	}
 
 	@Test
-	public void testConcat() throws Exception {
+	public void testConcat() {
 		TupleQuery query = conn.prepareTupleQuery(QueryLanguage.SPARQL, concatMbox);
 		TupleQueryResult result = query.evaluate();
 		assertTrue(result.hasNext());
@@ -82,7 +91,7 @@ public abstract class SparqlAggregatesTest {
 	}
 
 	@Test
-	public void testConcatOptional() throws Exception {
+	public void testConcatOptional() {
 		TupleQuery query = conn.prepareTupleQuery(QueryLanguage.SPARQL, concatOptionalMbox);
 		TupleQueryResult result = query.evaluate();
 		assertTrue(result.hasNext());
@@ -94,7 +103,7 @@ public abstract class SparqlAggregatesTest {
 	}
 
 	@Test
-	public void testCount() throws Exception {
+	public void testCount() {
 		TupleQuery query = conn.prepareTupleQuery(QueryLanguage.SPARQL, countMbox);
 		TupleQueryResult result = query.evaluate();
 		assertTrue(result.hasNext());
@@ -105,7 +114,7 @@ public abstract class SparqlAggregatesTest {
 	}
 
 	@Test
-	public void testCountOptional() throws Exception {
+	public void testCountOptional() {
 		Set<String> zeroOr1 = new HashSet<>();
 		zeroOr1.add("0");
 		zeroOr1.add("1");
@@ -119,8 +128,8 @@ public abstract class SparqlAggregatesTest {
 		result.close();
 	}
 
-	@Before
-	public void setUp() throws Exception {
+	@BeforeEach
+	public void setUp() {
 		repository = createRepository();
 		vf = repository.getValueFactory();
 		createUser("james", "James Leigh", "james@leigh");
@@ -129,7 +138,7 @@ public abstract class SparqlAggregatesTest {
 		conn = repository.getConnection();
 	}
 
-	protected Repository createRepository() throws Exception {
+	protected Repository createRepository() {
 		Repository repository = newRepository();
 		try (RepositoryConnection con = repository.getConnection()) {
 			con.clear();
@@ -138,10 +147,10 @@ public abstract class SparqlAggregatesTest {
 		return repository;
 	}
 
-	protected abstract Repository newRepository() throws Exception;
+	protected abstract Repository newRepository();
 
-	@After
-	public void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() {
 		conn.close();
 		conn = null;
 

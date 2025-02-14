@@ -1,14 +1,17 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.testsuite.repository;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.IRI;
@@ -20,16 +23,22 @@ import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public abstract class SparqlRegexTest {
 
-	@BeforeClass
-	public static void setUpClass() throws Exception {
+	@BeforeAll
+	public static void setUpClass() {
 		System.setProperty("org.eclipse.rdf4j.repository.debug", "true");
+	}
+
+	@AfterAll
+	public static void afterClass() throws Exception {
+		System.setProperty("org.eclipse.rdf4j.repository.debug", "false");
 	}
 
 	public String queryInline = "PREFIX foaf: <http://xmlns.com/foaf/0.1/>\n" + "SELECT ?name ?mbox\n"
@@ -59,7 +68,7 @@ public abstract class SparqlRegexTest {
 	private Literal hunt;
 
 	@Test
-	public void testInline() throws Exception {
+	public void testInline() {
 		TupleQuery query = conn.prepareTupleQuery(QueryLanguage.SPARQL, queryInline);
 		TupleQueryResult result = query.evaluate();
 		assertEquals(hunt, result.next().getValue("name"));
@@ -68,7 +77,7 @@ public abstract class SparqlRegexTest {
 	}
 
 	@Test
-	public void testBinding() throws Exception {
+	public void testBinding() {
 		TupleQuery query = conn.prepareTupleQuery(QueryLanguage.SPARQL, queryBinding);
 		query.setBinding("pattern", vf.createLiteral("@work.example"));
 		TupleQueryResult result = query.evaluate();
@@ -78,7 +87,7 @@ public abstract class SparqlRegexTest {
 	}
 
 	@Test
-	public void testBindingFlags() throws Exception {
+	public void testBindingFlags() {
 		TupleQuery query = conn.prepareTupleQuery(QueryLanguage.SPARQL, queryBindingFlags);
 		query.setBinding("pattern", vf.createLiteral("@Work.example"));
 		query.setBinding("flags", vf.createLiteral("i"));
@@ -89,7 +98,7 @@ public abstract class SparqlRegexTest {
 	}
 
 	@Test
-	public void testExpr() throws Exception {
+	public void testExpr() {
 		IRI pattern = vf.createIRI("http://example.org/ns#", "pattern");
 		IRI flags = vf.createIRI("http://example.org/ns#", "flags");
 		BNode bnode = vf.createBNode();
@@ -102,8 +111,8 @@ public abstract class SparqlRegexTest {
 		result.close();
 	}
 
-	@Before
-	public void setUp() throws Exception {
+	@BeforeEach
+	public void setUp() {
 		repository = createRepository();
 		vf = repository.getValueFactory();
 		hunt = vf.createLiteral("James Leigh Hunt");
@@ -113,7 +122,7 @@ public abstract class SparqlRegexTest {
 		conn = repository.getConnection();
 	}
 
-	protected Repository createRepository() throws Exception {
+	protected Repository createRepository() {
 		Repository repository = newRepository();
 		try (RepositoryConnection con = repository.getConnection()) {
 			con.clear();
@@ -122,10 +131,10 @@ public abstract class SparqlRegexTest {
 		return repository;
 	}
 
-	protected abstract Repository newRepository() throws Exception;
+	protected abstract Repository newRepository();
 
-	@After
-	public void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() {
 		conn.close();
 		conn = null;
 

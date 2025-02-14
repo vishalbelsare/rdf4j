@@ -1,13 +1,16 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra.evaluation.iterator;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -26,14 +29,13 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.algebra.BindingSetAssignment;
-import org.eclipse.rdf4j.query.algebra.Join;
 import org.eclipse.rdf4j.query.algebra.evaluation.EvaluationStrategy;
 import org.eclipse.rdf4j.query.algebra.evaluation.QueryBindingSet;
 import org.eclipse.rdf4j.query.algebra.evaluation.TripleSource;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.QueryEvaluationContext;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.StrictEvaluationStrategy;
 import org.eclipse.rdf4j.query.impl.EmptyBindingSet;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author MJAHale
@@ -50,14 +52,14 @@ public class JoinIteratorTest {
 		}
 
 		@Override
-		public CloseableIteration<? extends Statement, QueryEvaluationException> getStatements(Resource subj, IRI pred,
+		public CloseableIteration<? extends Statement> getStatements(Resource subj, IRI pred,
 				Value obj, Resource... contexts) throws QueryEvaluationException {
 			// TODO Auto-generated method stub
 			return null;
 		}
 	}, null);
 	private final QueryEvaluationContext context = new QueryEvaluationContext.Minimal(
-			vf.createLiteral(Date.from(Instant.now())), null);
+			vf.createLiteral(Date.from(Instant.now())), null, null);
 
 	/**
 	 * Tests joins between two different BindingSetAssignments with the same BindingSets but ordered differently.
@@ -103,11 +105,11 @@ public class JoinIteratorTest {
 			right.setBindingSets(rightb);
 		}
 
-		JoinIterator lrIter = new JoinIterator(evaluator, new Join(left, right), bindings, context);
+		var lrIter = JoinIterator.getInstance(evaluator.precompile(left), evaluator.precompile(right), bindings);
 		Set<BindingSet> lr = Iterations.asSet(lrIter);
 		assertEquals(expectedSize, lr.size());
 
-		JoinIterator rlIter = new JoinIterator(evaluator, new Join(right, left), bindings, context);
+		var rlIter = JoinIterator.getInstance(evaluator.precompile(right), evaluator.precompile(left), bindings);
 		Set<BindingSet> rl = Iterations.asSet(rlIter);
 		assertEquals(expectedSize, rl.size());
 

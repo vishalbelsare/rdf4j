@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.http.client;
 
@@ -351,6 +354,10 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	 * Query evaluation *
 	 *------------------*/
 
+	/**
+	 * @deprecated WeakReference<?> callerRef argument will be removed
+	 */
+	@Deprecated(since = "4.1.2")
 	public TupleQueryResult sendTupleQuery(QueryLanguage ql, String query, Dataset dataset, boolean includeInferred,
 			WeakReference<?> callerRef,
 			Binding... bindings) throws IOException, RepositoryException, MalformedQueryException,
@@ -358,6 +365,10 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 		return sendTupleQuery(ql, query, null, dataset, includeInferred, 0, callerRef, bindings);
 	}
 
+	/**
+	 * @deprecated WeakReference<?> callerRef argument will be removed
+	 */
+	@Deprecated(since = "4.1.2")
 	public TupleQueryResult sendTupleQuery(QueryLanguage ql, String query, String baseURI, Dataset dataset,
 			boolean includeInferred, int maxQueryTime, WeakReference<?> callerRef, Binding... bindings)
 			throws IOException, RepositoryException,
@@ -394,6 +405,10 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 		}
 	}
 
+	/**
+	 * @deprecated WeakReference<?> callerRef argument will be removed
+	 */
+	@Deprecated(since = "4.1.2")
 	public GraphQueryResult sendGraphQuery(QueryLanguage ql, String query, Dataset dataset, boolean includeInferred,
 			WeakReference<?> callerRef,
 			Binding... bindings) throws IOException, RepositoryException, MalformedQueryException,
@@ -401,6 +416,10 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 		return sendGraphQuery(ql, query, null, dataset, includeInferred, 0, callerRef, bindings);
 	}
 
+	/**
+	 * @deprecated WeakReference<?> callerRef argument will be removed
+	 */
+	@Deprecated(since = "4.1.2")
 	public GraphQueryResult sendGraphQuery(QueryLanguage ql, String query, String baseURI, Dataset dataset,
 			boolean includeInferred, int maxQueryTime, WeakReference<?> callerRef, Binding... bindings)
 			throws IOException, RepositoryException,
@@ -587,7 +606,7 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 		}
 
 		if (dataset != null) {
-			if (dataset.getDefaultRemoveGraphs().size() > 0) {
+			if (!dataset.getDefaultRemoveGraphs().isEmpty()) {
 				if (!(dataset.getDefaultRemoveGraphs().equals(dataset.getDefaultGraphs()))) {
 					logger.warn(
 							"ambiguous dataset spec for SPARQL endpoint: default graphs and default remove graphs both defined but not equal");
@@ -638,7 +657,10 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	/**
 	 * Parse the response in a background thread. HTTP connections are dealt with in the {@link BackgroundTupleResult}
 	 * or (in the error-case) in this method.
+	 *
+	 * @deprecated WeakReference<?> callerRef argument will be removed
 	 */
+	@Deprecated(since = "4.1.2")
 	protected TupleQueryResult getBackgroundTupleQueryResult(HttpUriRequest method, WeakReference<?> callerRef)
 			throws RepositoryException, QueryInterruptedException, MalformedQueryException, IOException {
 
@@ -650,7 +672,7 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 			throw new RepositoryException("No tuple query result parsers have been registered");
 		}
 
-		TupleQueryResult tRes = null;
+		TupleQueryResult tRes;
 		// send the tuple query
 		HttpResponse response = sendTupleQueryViaHttp(method, tqrFormats);
 		try {
@@ -768,7 +790,10 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	/**
 	 * Parse the response in a background thread. HTTP connections are dealt with in the {@link BackgroundGraphResult}
 	 * or (in the error-case) in this method.
+	 *
+	 * @deprecated WeakReference<?> callerRef argument will be removed
 	 */
+	@Deprecated(since = "4.1.2")
 	protected GraphQueryResult getRDFBackground(HttpUriRequest method, boolean requireContext,
 			WeakReference<?> callerRef)
 			throws IOException, RDFHandlerException, RepositoryException, MalformedQueryException,
@@ -782,7 +807,7 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 			throw new RepositoryException("No tuple RDF parsers have been registered");
 		}
 
-		GraphQueryResult gRes = null;
+		GraphQueryResult gRes;
 		// send the tuple query
 		HttpResponse response = sendGraphQueryViaHttp(method, requireContext, rdfFormats);
 		try {
@@ -1066,7 +1091,7 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 						throw new RepositoryException(new RemoteShaclValidationException(
 								new StringReader(errInfo.toString()), "", format));
 
-					} else if (errInfo.toString().length() > 0) {
+					} else if (!errInfo.toString().isEmpty()) {
 						throw new RepositoryException(errInfo.toString());
 					} else {
 						throw new RepositoryException(response.getStatusLine().getReasonPhrase());

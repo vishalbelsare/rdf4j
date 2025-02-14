@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Distribution License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.federated;
 
 import java.io.File;
@@ -36,14 +46,14 @@ public class LargeJoinTest extends FedXBaseTest {
 	private TestLocalRepositoryManager repoManager;
 
 	@BeforeEach
-	public void before() throws Exception {
+	public void before() {
 		File baseDir = new File(tempDir.toFile(), "data");
 		repoManager = new TestLocalRepositoryManager(baseDir);
 		repoManager.init();
 	}
 
 	@AfterEach
-	public void after() throws Exception {
+	public void after() {
 		repoManager.shutDown();
 	}
 
@@ -54,7 +64,7 @@ public class LargeJoinTest extends FedXBaseTest {
 
 	@Test
 	@Disabled
-	public void testWithLocalRepositoryManager() throws Exception {
+	public void testWithLocalRepositoryManager() {
 
 		addNativeStore("repo1");
 		addNativeStore("repo2");
@@ -112,7 +122,7 @@ public class LargeJoinTest extends FedXBaseTest {
 
 	}
 
-	protected void addNativeStore(String repoId) throws Exception {
+	protected void addNativeStore(String repoId) {
 
 		RepositoryImplConfig implConfig = new SailRepositoryConfig(new NativeStoreConfig());
 		RepositoryConfig config = new RepositoryConfig(repoId, implConfig);

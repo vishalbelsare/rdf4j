@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.rio;
 
@@ -94,12 +97,12 @@ public class RioTest {
 	}
 
 	@Test
-	public void createParser_existing() throws Exception {
+	public void createParser_existing() {
 		RDFParser parser = Rio.createParser(TEST_FORMAT);
 		assertThat(parser).isEqualTo(mockParser);
 	}
 
-	public void createParser_unknown() throws Exception {
+	public void createParser_unknown() {
 		RDFFormat unknownFormat = new RDFFormat("unknown", "test/unknown", StandardCharsets.UTF_8, "unknown", false,
 				false,
 				false);

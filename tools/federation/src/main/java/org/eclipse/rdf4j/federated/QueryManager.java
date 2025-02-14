@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.federated;
 
@@ -60,8 +63,8 @@ public class QueryManager {
 	private static final Logger log = LoggerFactory.getLogger(QueryManager.class);
 
 	private final AtomicBigInteger nextQueryID;
-	private Set<QueryInfo> runningQueries = new ConcurrentSkipListSet<>();
-	private Map<String, String> prefixDeclarations = new HashMap<>();
+	private final Set<QueryInfo> runningQueries = new ConcurrentSkipListSet<>();
+	private final Map<String, String> prefixDeclarations = new HashMap<>();
 
 	private FedXRepository repo;
 	private FederationContext federationContext;
@@ -251,7 +254,7 @@ public class QueryManager {
 	 */
 	public Query prepareQuery(String queryString) throws MalformedQueryException {
 
-		if (prefixDeclarations.size() > 0) {
+		if (!prefixDeclarations.isEmpty()) {
 
 			/*
 			 * we have to check for prefixes in the query to not add duplicate entries. In case duplicates are present
@@ -286,7 +289,7 @@ public class QueryManager {
 	 */
 	public String getQueryPlan(String queryString) throws MalformedQueryException, FedXException {
 
-		if (prefixDeclarations.size() > 0) {
+		if (!prefixDeclarations.isEmpty()) {
 
 			/*
 			 * we have to check for prefixes in the query to not add duplicate entries. In case duplicates are present
@@ -314,8 +317,7 @@ public class QueryManager {
 		try {
 			FederationEvaluationStatistics evaluationStatistics = new FederationEvaluationStatistics(qInfo,
 					new SimpleDataset());
-			tupleExpr = strategy
-					.optimize(tupleExpr, evaluationStatistics, EmptyBindingSet.getInstance());
+			tupleExpr = strategy.optimize(tupleExpr, evaluationStatistics, EmptyBindingSet.getInstance());
 			return tupleExpr.toString();
 		} catch (SailException e) {
 			throw new FedXException("Unable to retrieve query plan: " + e.getMessage());
@@ -350,7 +352,7 @@ public class QueryManager {
 
 	/**
 	 * Get the prefix declarations that have to be added while considering prefixes that are already declared in the
-	 * query. The issue here is that duplicate declaration causes exceptions in Sesame
+	 * query. The issue here is that duplicate declaration causes exceptions in RDF4J.
 	 *
 	 * @param queryString
 	 * @return the prefix declarations
@@ -383,18 +385,18 @@ public class QueryManager {
 
 		HashSet<String> res = new HashSet<>();
 
-		Scanner sc = new Scanner(queryString);
-		while (true) {
-			while (sc.findInLine(prefixPattern) != null) {
-				MatchResult m = sc.match();
-				res.add(m.group(1));
+		try (Scanner sc = new Scanner(queryString)) {
+			while (true) {
+				while (sc.findInLine(prefixPattern) != null) {
+					MatchResult m = sc.match();
+					res.add(m.group(1));
+				}
+				if (!sc.hasNextLine()) {
+					break;
+				}
+				sc.nextLine();
 			}
-			if (!sc.hasNextLine()) {
-				break;
-			}
-			sc.nextLine();
 		}
-		sc.close();
 		return res;
 	}
 

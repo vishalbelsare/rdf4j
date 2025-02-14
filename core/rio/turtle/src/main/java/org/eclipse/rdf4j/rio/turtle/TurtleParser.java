@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.rio.turtle;
 
@@ -28,6 +31,7 @@ import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Triple;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.base.CoreDatatype;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.Values;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
@@ -38,7 +42,6 @@ import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.RioSetting;
 import org.eclipse.rdf4j.rio.helpers.AbstractRDFParser;
 import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
-import org.eclipse.rdf4j.rio.helpers.TurtleParserSettings;
 
 /**
  * RDF parser for <a href="https://www.w3.org/TR/turtle/">RDF-1.1 Turtle</a> files. This parser is not thread-safe,
@@ -243,7 +246,7 @@ public class TurtleParser extends AbstractRDFParser {
 				unread(directive.substring(5));
 			}
 			parseBase();
-		} else if (directive.length() == 0) {
+		} else if (directive.isEmpty()) {
 			reportFatalError("Directive name is missing, expected @prefix or @base");
 		} else {
 			reportFatalError("Unknown directive \"" + directive + "\"");
@@ -636,7 +639,7 @@ public class TurtleParser extends AbstractRDFParser {
 
 			unread(c);
 
-			return createLiteral(label, lang.toString(), null, getLineNumber(), -1);
+			return createLiteral(label, lang.toString(), ((IRI) null), getLineNumber(), -1);
 		} else if (c == '^') {
 			readCodePoint();
 
@@ -657,7 +660,7 @@ public class TurtleParser extends AbstractRDFParser {
 			}
 			return createLiteral(label, null, (IRI) datatype, getLineNumber(), -1);
 		} else {
-			return createLiteral(label, null, null, getLineNumber(), -1);
+			return createLiteral(label, null, ((IRI) null), getLineNumber(), -1);
 		}
 	}
 
@@ -669,7 +672,7 @@ public class TurtleParser extends AbstractRDFParser {
 	 * @throws RDFParseException
 	 */
 	protected String parseQuotedString() throws IOException, RDFParseException {
-		String result = null;
+		String result;
 
 		int c1 = readCodePoint();
 
@@ -958,7 +961,7 @@ public class TurtleParser extends AbstractRDFParser {
 					BasicParserSettings.VERIFY_RELATIVE_URIS);
 		}
 
-		String namespace = null;
+		String namespace;
 
 		if (c == ':') {
 			// qname using default namespace
@@ -989,10 +992,10 @@ public class TurtleParser extends AbstractRDFParser {
 
 				if (value.equals("true")) {
 					unread(c);
-					return createLiteral("true", null, XSD.BOOLEAN, getLineNumber(), -1);
+					return createLiteral("true", null, CoreDatatype.XSD.BOOLEAN, getLineNumber(), -1);
 				} else if (value.equals("false")) {
 					unread(c);
-					return createLiteral("false", null, XSD.BOOLEAN, getLineNumber(), -1);
+					return createLiteral("false", null, CoreDatatype.XSD.BOOLEAN, getLineNumber(), -1);
 				}
 			}
 

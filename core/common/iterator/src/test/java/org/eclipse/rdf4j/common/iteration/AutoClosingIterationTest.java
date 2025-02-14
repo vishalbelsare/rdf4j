@@ -1,14 +1,24 @@
+/*******************************************************************************
+ * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Distribution License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.common.iteration;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class AutoClosingIterationTest {
 
@@ -47,11 +57,11 @@ public class AutoClosingIterationTest {
 	}
 
 	@Test
-	public void testClosingStreamWithAssertionErrorFinally() throws Exception {
+	public void testClosingStreamWithAssertionErrorFinally() {
 
 		CloseableIterationForTesting iterator = getIterator(Arrays.asList("a", "b", "c"));
 
-		try {
+		try (iterator) {
 			List<String> collect = iterator
 					.stream()
 					.filter(s -> {
@@ -61,8 +71,6 @@ public class AutoClosingIterationTest {
 					.collect(Collectors.toList());
 		} catch (Throwable ignored) {
 
-		} finally {
-			iterator.close();
 		}
 
 		assertTrue(iterator.closed);
@@ -73,7 +81,7 @@ public class AutoClosingIterationTest {
 		return new CloseableIterationForTesting(list);
 	}
 
-	static class CloseableIterationForTesting implements CloseableIteration<String, Exception> {
+	static class CloseableIterationForTesting implements CloseableIteration<String> {
 
 		public boolean closed = false;
 		Iterator<String> iterator;
@@ -83,22 +91,22 @@ public class AutoClosingIterationTest {
 		}
 
 		@Override
-		public void close() throws Exception {
+		public void close() {
 			closed = true;
 		}
 
 		@Override
-		public boolean hasNext() throws Exception {
+		public boolean hasNext() {
 			return iterator.hasNext();
 		}
 
 		@Override
-		public String next() throws Exception {
+		public String next() {
 			return iterator.next();
 		}
 
 		@Override
-		public void remove() throws Exception {
+		public void remove() {
 
 		}
 	}

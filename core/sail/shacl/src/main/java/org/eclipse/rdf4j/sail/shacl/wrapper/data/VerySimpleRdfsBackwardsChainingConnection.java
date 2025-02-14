@@ -1,11 +1,13 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
- *  All rights reserved. This program and the accompanying materials
- *  are made available under the terms of the Eclipse Distribution License v1.0
- *  which accompanies this distribution, and is available at
- *  http://www.eclipse.org/org/documents/edl-v10.php.
- ******************************************************************************/
-
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Distribution License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.sail.shacl.wrapper.data;
 
 import static org.eclipse.rdf4j.model.util.Statements.statement;
@@ -56,8 +58,11 @@ public class VerySimpleRdfsBackwardsChainingConnection extends SailConnectionWra
 				&& RDF.TYPE.equals(pred)) {
 
 			Set<Resource> types = rdfsSubClassOfReasoner.backwardsChain((Resource) obj);
+			if (types.size() == 1) {
+				return hasStatement;
+			}
 			if (types.size() > 10) {
-				try (CloseableIteration<? extends Statement, SailException> statements = super.getStatements(subj,
+				try (CloseableIteration<? extends Statement> statements = super.getStatements(subj,
 						RDF.TYPE, null, false, contexts)) {
 					return statements.stream()
 							.map(Statement::getObject)
@@ -77,42 +82,50 @@ public class VerySimpleRdfsBackwardsChainingConnection extends SailConnectionWra
 	}
 
 	@Override
-	public CloseableIteration<? extends Statement, SailException> getStatements(Resource subj, IRI pred, Value obj,
+	public CloseableIteration<? extends Statement> getStatements(Resource subj, IRI pred, Value obj,
 			boolean includeInferred, Resource... contexts) throws SailException {
 
 		if (rdfsSubClassOfReasoner != null && includeInferred && obj != null && obj.isResource()
 				&& RDF.TYPE.equals(pred)) {
 			Set<Resource> inferredTypes = rdfsSubClassOfReasoner.backwardsChain((Resource) obj);
-			if (!inferredTypes.isEmpty()) {
+			if (inferredTypes.size() > 1) {
 
-				CloseableIteration<Statement, SailException>[] statementsMatchingInferredTypes = inferredTypes.stream()
+				CloseableIteration<Statement>[] statementsMatchingInferredTypes = inferredTypes.stream()
 						.map(r -> super.getStatements(subj, pred, r, false, contexts))
 						.toArray(CloseableIteration[]::new);
 
-				return new LookAheadIteration<Statement, SailException>() {
+				return new LookAheadIteration<>() {
 
-					final UnionIteration<Statement, SailException> unionIteration = new UnionIteration<>(
+					final UnionIteration<Statement> unionIteration = new UnionIteration<>(
 							statementsMatchingInferredTypes);
 
 					final HashSet<Statement> dedupe = new HashSet<>();
+
+					Value localObject = obj;
 
 					@Override
 					protected Statement getNextElement() throws SailException {
 						Statement next = null;
 
 						while (next == null && unionIteration.hasNext()) {
-							Statement temp = unionIteration.next();
-							temp = statement(temp.getSubject(), temp.getPredicate(), obj, temp.getContext());
+							Statement statement = unionIteration.next();
+
+							if (!localObject.equals(statement.getObject())) {
+								statement = statement(statement.getSubject(), statement.getPredicate(), localObject,
+										statement.getContext());
+							} else {
+								localObject = statement.getObject();
+							}
 
 							if (!dedupe.isEmpty()) {
-								boolean contains = dedupe.contains(temp);
+								boolean contains = dedupe.contains(statement);
 								if (!contains) {
-									next = temp;
-									dedupe.add(next);
+									next = statement;
+									dedupe.add(statement);
 								}
 							} else {
-								next = temp;
-								dedupe.add(next);
+								next = statement;
+								dedupe.add(statement);
 							}
 
 						}
@@ -121,17 +134,8 @@ public class VerySimpleRdfsBackwardsChainingConnection extends SailConnectionWra
 					}
 
 					@Override
-					public void remove() throws SailException {
-						throw new IllegalStateException("Not implemented");
-					}
-
-					@Override
 					protected void handleClose() throws SailException {
-						try {
-							unionIteration.close();
-						} finally {
-							super.handleClose();
-						}
+						unionIteration.close();
 					}
 
 				};

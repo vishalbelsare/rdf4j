@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.lucene.impl;
 
@@ -42,14 +45,6 @@ public class LuceneDocument implements SearchDocument {
 	private static final String GEO_FIELD_PREFIX = "_geo_";
 
 	private final Function<? super String, ? extends SpatialStrategy> geoStrategyMapper;
-
-	/**
-	 * To be removed, no longer used.
-	 */
-	@Deprecated
-	public LuceneDocument() {
-		this(null);
-	}
 
 	public LuceneDocument(Function<? super String, ? extends SpatialStrategy> geoStrategyMapper) {
 		this(new Document(), geoStrategyMapper);
@@ -171,7 +166,12 @@ public class LuceneDocument implements SearchDocument {
 					doc.add(f);
 				}
 			} else if (shape instanceof double[]) { // WKT:POINT
-				double point[] = (double[]) shape;
+				double[] point = (double[]) shape;
+
+				for (Field f : LatLonShape.createIndexableFields(GEO_FIELD_PREFIX + field, point[1],
+						point[0])) {
+					doc.add(f);
+				}
 				doc.add(new LatLonPoint(POINT_FIELD_PREFIX + field, point[1], point[0]));
 			} else if (shape instanceof Rectangle) { // WKT:ENVELOPE / RECTANGLE
 				Rectangle box = (Rectangle) shape;

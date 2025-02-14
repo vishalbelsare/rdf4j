@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.federated;
 
@@ -23,6 +26,7 @@ import org.eclipse.rdf4j.federated.evaluation.SparqlFederationEvalStrategy;
 import org.eclipse.rdf4j.federated.evaluation.concurrent.ControlledWorkerScheduler;
 import org.eclipse.rdf4j.federated.evaluation.concurrent.NamingThreadFactory;
 import org.eclipse.rdf4j.federated.evaluation.concurrent.Scheduler;
+import org.eclipse.rdf4j.federated.evaluation.concurrent.SchedulerFactory;
 import org.eclipse.rdf4j.federated.evaluation.concurrent.TaskWrapper;
 import org.eclipse.rdf4j.federated.evaluation.union.ControlledWorkerUnion;
 import org.eclipse.rdf4j.federated.evaluation.union.SynchronousWorkerUnion;
@@ -70,7 +74,7 @@ public class FederationManager {
 	public enum FederationType {
 		LOCAL,
 		REMOTE,
-		HYBRID;
+		HYBRID
 	}
 
 	/* Instance variables */
@@ -103,6 +107,7 @@ public class FederationManager {
 		FederationEvaluationStrategyFactory strategyFactory = federation.getFederationEvaluationStrategyFactory();
 		strategyFactory.setFederationType(federationType);
 		strategyFactory.setFederationContext(federationContext);
+		strategyFactory.setCollectionFactory(federation.getCollectionFactory());
 		return strategyFactory;
 	}
 
@@ -114,26 +119,28 @@ public class FederationManager {
 			log.debug("Scheduler for join and union are reset.");
 		}
 
+		SchedulerFactory schedulerFactory = federation.getSchedulerFactory();
+
 		Optional<TaskWrapper> taskWrapper = federationContext.getConfig().getTaskWrapper();
 		if (joinScheduler != null) {
 			joinScheduler.abort();
 		}
-		joinScheduler = new ControlledWorkerScheduler<>(federationContext.getConfig().getJoinWorkerThreads(),
-				"Join Scheduler");
+		joinScheduler = schedulerFactory.createJoinScheduler(federationContext,
+				federationContext.getConfig().getJoinWorkerThreads());
 		taskWrapper.ifPresent(joinScheduler::setTaskWrapper);
 
 		if (unionScheduler != null) {
 			unionScheduler.abort();
 		}
-		unionScheduler = new ControlledWorkerScheduler<>(federationContext.getConfig().getUnionWorkerThreads(),
-				"Union Scheduler");
+		unionScheduler = schedulerFactory.createUnionScheduler(federationContext,
+				federationContext.getConfig().getUnionWorkerThreads());
 		taskWrapper.ifPresent(unionScheduler::setTaskWrapper);
 
 		if (leftJoinScheduler != null) {
 			leftJoinScheduler.abort();
 		}
-		leftJoinScheduler = new ControlledWorkerScheduler<>(federationContext.getConfig().getLeftJoinWorkerThreads(),
-				"Left Join Scheduler");
+		leftJoinScheduler = schedulerFactory.createLeftJoinScheduler(federationContext,
+				federationContext.getConfig().getLeftJoinWorkerThreads());
 		taskWrapper.ifPresent(leftJoinScheduler::setTaskWrapper);
 
 	}
@@ -199,7 +206,7 @@ public class FederationManager {
 		federationContext.getEndpointManager().addEndpoint(e);
 
 		if (updateStrategy == null || updateStrategy.length == 0
-				|| (updateStrategy.length == 1 && updateStrategy[0] == true)) {
+				|| (updateStrategy.length == 1 && updateStrategy[0])) {
 			updateFederationType();
 		}
 	}
@@ -237,7 +244,7 @@ public class FederationManager {
 		federationContext.getEndpointManager().removeEndpoint(e);
 
 		if (updateStrategy == null || updateStrategy.length == 0
-				|| (updateStrategy.length == 1 && updateStrategy[0] == true)) {
+				|| (updateStrategy.length == 1 && updateStrategy[0])) {
 			updateFederationType();
 		}
 	}
@@ -272,35 +279,60 @@ public class FederationManager {
 	 */
 	public synchronized void shutDown() throws FedXException {
 
-		log.info("Shutting down federation and all underlying repositories ...");
-		// Abort all running queries
-		federationContext.getQueryManager().shutdown();
-		executor.shutdown();
 		try {
-			executor.awaitTermination(30, TimeUnit.SECONDS);
-		} catch (InterruptedException e) {
-			log.warn("Failed to shutdown executor:" + e.getMessage());
-			log.debug("Details:", e);
+			log.info("Shutting down federation and all underlying repositories ...");
+			// Abort all running queries
+			federationContext.getQueryManager().shutdown();
+			executor.shutdown();
+			try {
+				executor.awaitTermination(30, TimeUnit.SECONDS);
+			} catch (InterruptedException e) {
+				log.warn("Failed to shutdown executor:" + e.getMessage());
+				log.debug("Details:", e);
+				Thread.currentThread().interrupt();
+			} finally {
+				executor.shutdownNow();
+			}
+		} finally {
+			try {
+				try {
+					joinScheduler.shutdown();
+				} catch (Exception e) {
+					log.warn("Failed to shutdown join scheduler: " + e.getMessage());
+					log.debug("Details: ", e);
+				} finally {
+					joinScheduler.abort();
+				}
+			} finally {
+				try {
+					try {
+						unionScheduler.shutdown();
+					} catch (Exception e) {
+						log.warn("Failed to shutdown union scheduler: " + e.getMessage());
+						log.debug("Details: ", e);
+					} finally {
+						unionScheduler.abort();
+					}
+				} finally {
+					try {
+						try {
+							leftJoinScheduler.shutdown();
+						} catch (Exception e) {
+							log.warn("Failed to shutdown left join scheduler: " + e.getMessage());
+							log.debug("Details: ", e);
+						} finally {
+							leftJoinScheduler.abort();
+						}
+					} finally {
+						federationContext.getFederatedServiceResolver().shutDown();
+					}
+
+				}
+
+			}
+
 		}
-		try {
-			joinScheduler.shutdown();
-		} catch (Exception e) {
-			log.warn("Failed to shutdown join scheduler: " + e.getMessage());
-			log.debug("Details: ", e);
-		}
-		try {
-			unionScheduler.shutdown();
-		} catch (Exception e) {
-			log.warn("Failed to shutdown union scheduler: " + e.getMessage());
-			log.debug("Details: ", e);
-		}
-		try {
-			leftJoinScheduler.shutdown();
-		} catch (Exception e) {
-			log.warn("Failed to shutdown left join scheduler: " + e.getMessage());
-			log.debug("Details: ", e);
-		}
-		federationContext.getFederatedServiceResolver().shutDown();
+
 	}
 
 	/**

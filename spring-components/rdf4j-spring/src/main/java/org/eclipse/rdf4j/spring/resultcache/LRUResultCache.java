@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.spring.resultcache;
@@ -23,15 +26,15 @@ import org.slf4j.LoggerFactory;
 
 /**
  * @param <T>
- * @since 4.0.0
  * @author Florian Kleedorfer
+ * @since 4.0.0
  */
 public class LRUResultCache<T> implements ResultCache<Integer, T> {
 	private static final Logger logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-	private Map<Integer, Entry<T>> cache;
-	private AtomicBoolean dirty = new AtomicBoolean(false);
-	private Map<Thread, Boolean> bypassInThread = Collections.synchronizedMap(new WeakHashMap<>());
-	private Duration entryLifetime;
+	private final Map<Integer, Entry<T>> cache;
+	private final AtomicBoolean dirty = new AtomicBoolean(false);
+	private final Map<Thread, Boolean> bypassInThread = Collections.synchronizedMap(new WeakHashMap<>());
+	private final Duration entryLifetime;
 
 	public LRUResultCache(ResultCacheProperties properties) {
 		this.entryLifetime = properties.getEntryLifetime();

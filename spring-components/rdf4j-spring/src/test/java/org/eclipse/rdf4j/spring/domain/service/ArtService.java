@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.spring.domain.service;
@@ -26,6 +29,16 @@ public class ArtService {
 	@Autowired
 	private PaintingDao paintingDao;
 
+	@Transactional
+	public Artist getArtist(IRI id) {
+		return this.artistDao.getById(id);
+	}
+
+	@Transactional
+	public Painting getPainting(IRI id) {
+		return this.paintingDao.getById(id);
+	}
+
 	@Transactional(propagation = Propagation.REQUIRED)
 	public Artist createArtist(String firstName, String lastName) {
 		Artist artist = new Artist();
@@ -41,6 +54,11 @@ public class ArtService {
 		painting.setTechnique(technique);
 		painting.setArtistId(artist);
 		return paintingDao.save(painting);
+	}
+
+	@Transactional(propagation = Propagation.REQUIRED)
+	public void changeArtist(IRI painting, IRI newArtist) {
+		paintingDao.changeArtist(painting, newArtist);
 	}
 
 }

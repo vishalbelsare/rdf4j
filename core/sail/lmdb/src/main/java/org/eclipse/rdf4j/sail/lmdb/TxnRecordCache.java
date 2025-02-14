@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.lmdb;
 
@@ -18,6 +21,7 @@ import static org.lwjgl.util.lmdb.LMDB.MDB_NOMETASYNC;
 import static org.lwjgl.util.lmdb.LMDB.MDB_NOSYNC;
 import static org.lwjgl.util.lmdb.LMDB.MDB_NOTLS;
 import static org.lwjgl.util.lmdb.LMDB.MDB_RDONLY;
+import static org.lwjgl.util.lmdb.LMDB.MDB_SUCCESS;
 import static org.lwjgl.util.lmdb.LMDB.mdb_cursor_close;
 import static org.lwjgl.util.lmdb.LMDB.mdb_cursor_get;
 import static org.lwjgl.util.lmdb.LMDB.mdb_cursor_open;
@@ -41,6 +45,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.apache.commons.io.FileUtils;
+import org.eclipse.rdf4j.sail.SailException;
 import org.lwjgl.PointerBuffer;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.util.lmdb.MDBStat;
@@ -54,7 +59,8 @@ final class TxnRecordCache {
 
 	private final Path dbDir;
 	private final long env;
-	private int dbiExplicit, dbiInferred;
+	private final int dbiExplicit;
+	private final int dbiInferred;
 	private long writeTxn;
 	private long mapSize = 1048576; // 1 MiB
 	private long pageSize;
@@ -129,9 +135,10 @@ final class TxnRecordCache {
 			keyBuf.flip();
 			keyVal.mv_data(keyBuf);
 
-			boolean foundExplicit = mdb_get(writeTxn, dbiExplicit, keyVal, dataVal) == 0 &&
+			boolean foundExplicit = mdb_get(writeTxn, dbiExplicit, keyVal, dataVal) == MDB_SUCCESS &&
 					(dataVal.mv_data().get(0) & 0b1) != 0;
-			boolean foundImplicit = !foundExplicit && mdb_get(writeTxn, dbiInferred, keyVal, dataVal) == 0 &&
+			boolean foundImplicit = !foundExplicit && mdb_get(writeTxn, dbiInferred, keyVal, dataVal) == MDB_SUCCESS
+					&&
 					(dataVal.mv_data().get(0) & 0b1) != 0;
 
 			boolean found = foundExplicit || foundImplicit;
@@ -172,9 +179,9 @@ final class TxnRecordCache {
 		private final MDBVal keyData = MDBVal.malloc();
 		private final MDBVal valueData = MDBVal.malloc();
 		private long txn;
-		private long cursor;
-		private int dbi;
-		private long[] quad = new long[4];
+		private final long cursor;
+		private final int dbi;
+		private final long[] quad = new long[4];
 
 		protected RecordCacheIterator(int dbi) throws IOException {
 			this.dbi = dbi;
@@ -189,8 +196,8 @@ final class TxnRecordCache {
 			}
 		}
 
-		public Record next() throws IOException {
-			if (mdb_cursor_get(cursor, keyData, valueData, MDB_NEXT) == 0) {
+		public Record next() {
+			if (mdb_cursor_get(cursor, keyData, valueData, MDB_NEXT) == MDB_SUCCESS) {
 				Varint.readListUnsigned(keyData.mv_data(), quad);
 				byte op = valueData.mv_data().get(0);
 				Record r = new Record();

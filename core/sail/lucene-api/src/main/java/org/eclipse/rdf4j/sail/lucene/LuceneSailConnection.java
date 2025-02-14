@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.lucene;
 
@@ -34,20 +37,20 @@ import org.eclipse.rdf4j.query.algebra.evaluation.EvaluationStrategy;
 import org.eclipse.rdf4j.query.algebra.evaluation.QueryContext;
 import org.eclipse.rdf4j.query.algebra.evaluation.federation.AbstractFederatedServiceResolver;
 import org.eclipse.rdf4j.query.algebra.evaluation.federation.FederatedServiceResolver;
-import org.eclipse.rdf4j.query.algebra.evaluation.impl.BindingAssigner;
-import org.eclipse.rdf4j.query.algebra.evaluation.impl.CompareOptimizer;
-import org.eclipse.rdf4j.query.algebra.evaluation.impl.ConjunctiveConstraintSplitter;
-import org.eclipse.rdf4j.query.algebra.evaluation.impl.ConstantOptimizer;
-import org.eclipse.rdf4j.query.algebra.evaluation.impl.DisjunctiveConstraintOptimizer;
-import org.eclipse.rdf4j.query.algebra.evaluation.impl.FilterOptimizer;
-import org.eclipse.rdf4j.query.algebra.evaluation.impl.IterativeEvaluationOptimizer;
-import org.eclipse.rdf4j.query.algebra.evaluation.impl.OrderLimitOptimizer;
-import org.eclipse.rdf4j.query.algebra.evaluation.impl.QueryJoinOptimizer;
-import org.eclipse.rdf4j.query.algebra.evaluation.impl.QueryModelNormalizer;
-import org.eclipse.rdf4j.query.algebra.evaluation.impl.SameTermFilterOptimizer;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.TupleFunctionEvaluationStatistics;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.TupleFunctionEvaluationStrategy;
 import org.eclipse.rdf4j.query.algebra.evaluation.iterator.QueryContextIteration;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.BindingAssignerOptimizer;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.CompareOptimizer;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.ConjunctiveConstraintSplitterOptimizer;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.ConstantOptimizer;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.DisjunctiveConstraintOptimizer;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.FilterOptimizer;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.IterativeEvaluationOptimizer;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.OrderLimitOptimizer;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.QueryJoinOptimizer;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.QueryModelNormalizerOptimizer;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.SameTermFilterOptimizer;
 import org.eclipse.rdf4j.sail.NotifyingSailConnection;
 import org.eclipse.rdf4j.sail.SailConnectionListener;
 import org.eclipse.rdf4j.sail.SailException;
@@ -304,7 +307,7 @@ public class LuceneSailConnection extends NotifyingSailConnectionWrapper {
 					// not inside the update statement, searching with the connection
 					for (IRI predicate : mapping.keySet()) {
 						Set<IRI> objects = mapping.get(predicate);
-						try (CloseableIteration<? extends Statement, SailException> statements = getStatements(
+						try (CloseableIteration<? extends Statement> statements = getStatements(
 								stmt.getSubject(),
 								predicate,
 								null,
@@ -334,7 +337,7 @@ public class LuceneSailConnection extends NotifyingSailConnectionWrapper {
 			for (Map.Entry<Resource, Boolean> e : typeAdd.entrySet()) {
 				if (e.getValue()) {
 					Resource subject = e.getKey();
-					try (CloseableIteration<? extends Statement, SailException> statements = getStatements(
+					try (CloseableIteration<? extends Statement> statements = getStatements(
 							subject, null, null, false
 					)) {
 						while (statements.hasNext()) {
@@ -356,7 +359,7 @@ public class LuceneSailConnection extends NotifyingSailConnectionWrapper {
 		// backtrace previous insert of property and delete them from the index
 		if (backtraceMode.shouldBackTraceDelete()) {
 			for (Resource subject : typeRemove) {
-				try (CloseableIteration<? extends Statement, SailException> statements = getStatements(
+				try (CloseableIteration<? extends Statement> statements = getStatements(
 						subject, null, null, false
 				)) {
 					while (statements.hasNext()) {
@@ -392,12 +395,12 @@ public class LuceneSailConnection extends NotifyingSailConnectionWrapper {
 	// //////////////////////////////// Methods related to querying
 
 	@Override
-	public synchronized CloseableIteration<? extends BindingSet, QueryEvaluationException> evaluate(TupleExpr tupleExpr,
+	public synchronized CloseableIteration<? extends BindingSet> evaluate(TupleExpr tupleExpr,
 			Dataset dataset, BindingSet bindings, boolean includeInferred) throws SailException {
 		QueryContext qctx = new QueryContext();
 		SearchIndexQueryContextInitializer.init(qctx, luceneIndex);
 
-		final CloseableIteration<? extends BindingSet, QueryEvaluationException> iter;
+		final CloseableIteration<? extends BindingSet> iter;
 		qctx.begin();
 		try {
 			iter = evaluateInternal(tupleExpr, dataset, bindings, includeInferred);
@@ -410,7 +413,7 @@ public class LuceneSailConnection extends NotifyingSailConnectionWrapper {
 		return new QueryContextIteration(iter, qctx);
 	}
 
-	private CloseableIteration<? extends BindingSet, QueryEvaluationException> evaluateInternal(TupleExpr tupleExpr,
+	private CloseableIteration<? extends BindingSet> evaluateInternal(TupleExpr tupleExpr,
 			Dataset dataset, BindingSet bindings, boolean includeInferred) throws SailException {
 		// Don't modify the original tuple expression
 		tupleExpr = tupleExpr.clone();
@@ -423,7 +426,7 @@ public class LuceneSailConnection extends NotifyingSailConnectionWrapper {
 
 		// Inline any externally set bindings, lucene statement patterns can also
 		// use externally bound variables
-		new BindingAssigner().optimize(tupleExpr, dataset, bindings);
+		new BindingAssignerOptimizer().optimize(tupleExpr, dataset, bindings);
 
 		List<SearchQueryEvaluator> queries = new ArrayList<>();
 
@@ -438,19 +441,21 @@ public class LuceneSailConnection extends NotifyingSailConnectionWrapper {
 
 		if (sail.getEvaluationMode() == TupleFunctionEvaluationMode.TRIPLE_SOURCE) {
 			ValueFactory vf = sail.getValueFactory();
+			SailTripleSource tripleSource = new SailTripleSource(this, includeInferred, vf);
 			EvaluationStrategy strategy = new TupleFunctionEvaluationStrategy(
-					new SailTripleSource(this, includeInferred, vf), dataset, sail.getFederatedServiceResolver(),
+					tripleSource, dataset, sail.getFederatedServiceResolver(),
 					sail.getTupleFunctionRegistry());
 
 			// do standard optimizations
-			new BindingAssigner().optimize(tupleExpr, dataset, bindings);
+			new BindingAssignerOptimizer().optimize(tupleExpr, dataset, bindings);
 			new ConstantOptimizer(strategy).optimize(tupleExpr, dataset, bindings);
 			new CompareOptimizer().optimize(tupleExpr, dataset, bindings);
-			new ConjunctiveConstraintSplitter().optimize(tupleExpr, dataset, bindings);
+			new ConjunctiveConstraintSplitterOptimizer().optimize(tupleExpr, dataset, bindings);
 			new DisjunctiveConstraintOptimizer().optimize(tupleExpr, dataset, bindings);
 			new SameTermFilterOptimizer().optimize(tupleExpr, dataset, bindings);
-			new QueryModelNormalizer().optimize(tupleExpr, dataset, bindings);
-			new QueryJoinOptimizer(new TupleFunctionEvaluationStatistics()).optimize(tupleExpr, dataset, bindings);
+			new QueryModelNormalizerOptimizer().optimize(tupleExpr, dataset, bindings);
+			new QueryJoinOptimizer(new TupleFunctionEvaluationStatistics(), tripleSource).optimize(tupleExpr, dataset,
+					bindings);
 			// new SubSelectJoinOptimizer().optimize(tupleExpr, dataset,
 			// bindings);
 			new IterativeEvaluationOptimizer().optimize(tupleExpr, dataset, bindings);

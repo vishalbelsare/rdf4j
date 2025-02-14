@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.rio.helpers;
 
@@ -27,7 +30,7 @@ public class RDFStarUtil {
 	 */
 	public static final String TRIPLE_PREFIX = "urn:rdf4j:triple:";
 
-	private static ValueFactory VF = SimpleValueFactory.getInstance();
+	private static final ValueFactory VF = SimpleValueFactory.getInstance();
 
 	/**
 	 * Converts the supplied value from RDF-star to an RDF-compatible representation.
@@ -64,6 +67,30 @@ public class RDFStarUtil {
 			return isEncodedTriple(encodedValue)
 					? (T) NTriplesUtil.parseTriple(decode(
 							encodedValue.stringValue().substring(TRIPLE_PREFIX.length())), VF)
+					: encodedValue;
+		} catch (IllegalArgumentException e) {
+			throw new IllegalArgumentException("Invalid RDF-star encoded triple: " + encodedValue);
+		}
+	}
+
+	/**
+	 * Converts the supplied value from an RDF-compatible representation to an RDF-star value.
+	 * <p>
+	 * See {@link #toRDFEncodedValue(Value)}.
+	 *
+	 * @param encodedValue an RDF {@link Value} to convert to RDF-star.
+	 * @param valueFactory the {@link ValueFactory} to use for parsing the triple.
+	 * @param <T>
+	 * @return the decoded RDF-star triple, if a {@link Triple} encoded as {@link IRI} was supplied, or the supplied
+	 *         value otherwise.
+	 * @throws IllegalArgumentException if the supplied value looked like an RDF-star triple encoded as an IRI but it
+	 *                                  could not be decoded successfully.
+	 */
+	public static <T extends Value> T fromRDFEncodedValue(T encodedValue, ValueFactory valueFactory) {
+		try {
+			return isEncodedTriple(encodedValue)
+					? (T) NTriplesUtil.parseTriple(decode(
+							encodedValue.stringValue().substring(TRIPLE_PREFIX.length())), valueFactory)
 					: encodedValue;
 		} catch (IllegalArgumentException e) {
 			throw new IllegalArgumentException("Invalid RDF-star encoded triple: " + encodedValue);

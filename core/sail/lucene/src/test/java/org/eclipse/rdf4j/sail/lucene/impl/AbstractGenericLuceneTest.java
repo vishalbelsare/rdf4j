@@ -1,10 +1,13 @@
-/**
+/*******************************************************************************
  * Copyright (c) 2017 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
- */
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.sail.lucene.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -13,11 +16,11 @@ import static org.eclipse.rdf4j.sail.lucene.LuceneSailSchema.PROPERTY;
 import static org.eclipse.rdf4j.sail.lucene.LuceneSailSchema.QUERY;
 import static org.eclipse.rdf4j.sail.lucene.LuceneSailSchema.SCORE;
 import static org.eclipse.rdf4j.sail.lucene.LuceneSailSchema.SNIPPET;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -34,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import org.eclipse.rdf4j.common.concurrent.locks.Properties;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Resource;
@@ -59,19 +63,15 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.sail.lucene.LuceneSail;
 import org.eclipse.rdf4j.sail.lucene.LuceneSailSchema;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Timeout(value = 10, unit = TimeUnit.MINUTES)
 public abstract class AbstractGenericLuceneTest {
-
-	@Rule
-	public Timeout timeout = new Timeout(10, TimeUnit.MINUTES);
-
 	protected static final ValueFactory vf = SimpleValueFactory.getInstance();
 
 	public static final String QUERY_STRING;
@@ -119,7 +119,7 @@ public abstract class AbstractGenericLuceneTest {
 
 	protected abstract void configure(LuceneSail sail) throws IOException;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		// set logging, uncomment this to get better logging for debugging
 		// org.apache.log4j.BasicConfigurator.configure();
@@ -127,7 +127,7 @@ public abstract class AbstractGenericLuceneTest {
 		// setup a LuceneSail
 		MemoryStore memoryStore = new MemoryStore();
 		// enable lock tracking
-		org.eclipse.rdf4j.common.concurrent.locks.Properties.setLockTrackingEnabled(true);
+		Properties.setLockTrackingEnabled(true);
 		sail = new LuceneSail();
 		configure(sail);
 		sail.setBaseSail(memoryStore);
@@ -150,8 +150,8 @@ public abstract class AbstractGenericLuceneTest {
 		connection.commit();
 	}
 
-	@After
-	public void tearDown() throws IOException, RepositoryException {
+	@AfterEach
+	public void tearDown() throws RepositoryException {
 		try {
 			if (connection != null) {
 				connection.close();
@@ -161,6 +161,7 @@ public abstract class AbstractGenericLuceneTest {
 				repository.shutDown();
 			}
 		}
+		Properties.setLockTrackingEnabled(false);
 	}
 
 	@Test
@@ -264,10 +265,10 @@ public abstract class AbstractGenericLuceneTest {
 
 			// the number of matched expected results must be equal to the number
 			// of actual results
-			assertEquals("How many expected results were retrieved for query #" + queryID + "?",
-					expectedResultSet.size(), matched.size());
-			assertEquals("How many actual results were retrieved for query #" + queryID + "?", expectedResultSet.size(),
-					actualResults);
+			assertEquals(expectedResultSet.size(), matched.size(),
+					"How many expected results were retrieved for query #" + queryID + "?");
+			assertEquals(expectedResultSet.size(), actualResults,
+					"How many actual results were retrieved for query #" + queryID + "?");
 		}
 	}
 
@@ -352,7 +353,7 @@ public abstract class AbstractGenericLuceneTest {
 		try (TupleQueryResult result = query.evaluate()) {
 
 			// check the results
-			BindingSet bindings = null;
+			BindingSet bindings;
 
 			// the first result is subject 1 and has a score
 			int results = 0;
@@ -414,7 +415,7 @@ public abstract class AbstractGenericLuceneTest {
 		try (TupleQueryResult result = query.evaluate()) {
 
 			// check the results
-			BindingSet bindings = null;
+			BindingSet bindings;
 
 			// the first result is subject 1 and has a score
 			int results = 0;
@@ -451,14 +452,14 @@ public abstract class AbstractGenericLuceneTest {
 			}
 
 			// we found all
-			assertTrue("These were expected but not found: " + expectedSnippetPart, expectedSnippetPart.isEmpty());
+			assertTrue(expectedSnippetPart.isEmpty(), "These were expected but not found: " + expectedSnippetPart);
 
-			assertEquals("there should have been 2 results", 2, results);
+			assertEquals(2, results, "there should have been 2 results");
 		}
 	}
 
 	@Test
-	public void testCharlyTerm() throws Exception {
+	public void testCharlyTerm() {
 
 		try (RepositoryConnection localConnection = repository.getConnection()) {
 			localConnection.begin();
@@ -486,7 +487,7 @@ public abstract class AbstractGenericLuceneTest {
 		try (TupleQueryResult result = query.evaluate()) {
 
 			// check the results
-			BindingSet bindings = null;
+			BindingSet bindings;
 
 			// the first result is subject 1 and has a score
 			int results = 0;
@@ -520,9 +521,9 @@ public abstract class AbstractGenericLuceneTest {
 			}
 
 			// we found all
-			assertTrue("These were expected but not found: " + expectedSnippetPart, expectedSnippetPart.isEmpty());
+			assertTrue(expectedSnippetPart.isEmpty(), "These were expected but not found: " + expectedSnippetPart);
 
-			assertEquals("there should have been 3 results", 3, results);
+			assertEquals(3, results, "there should have been 3 results");
 		}
 	}
 
@@ -616,10 +617,9 @@ public abstract class AbstractGenericLuceneTest {
 	/**
 	 * Tests adding data to two contexts (graphs).
 	 *
-	 * @throws Exception
 	 */
 	@Test
-	public void testContextHandling() throws Exception {
+	public void testContextHandling() {
 		connection.add(SUBJECT_4, PREDICATE_1, vf.createLiteral("sfourponecone"), CONTEXT_1);
 		connection.add(SUBJECT_4, PREDICATE_2, vf.createLiteral("sfourptwocone"), CONTEXT_1);
 		connection.add(SUBJECT_5, PREDICATE_1, vf.createLiteral("sfiveponecone"), CONTEXT_1);
@@ -650,10 +650,9 @@ public abstract class AbstractGenericLuceneTest {
 	/**
 	 * we experienced problems with the NULL context and lucenesail in August 2008
 	 *
-	 * @throws Exception
 	 */
 	@Test
-	public void testNullContextHandling() throws Exception {
+	public void testNullContextHandling() {
 		connection.add(SUBJECT_4, PREDICATE_1, vf.createLiteral("sfourponecone"));
 		connection.add(SUBJECT_4, PREDICATE_2, vf.createLiteral("sfourptwocone"));
 		connection.add(SUBJECT_5, PREDICATE_1, vf.createLiteral("sfiveponecone"));
@@ -698,7 +697,7 @@ public abstract class AbstractGenericLuceneTest {
 		// check the results
 		try (TupleQueryResult result = query.evaluate()) {
 			// check the results
-			BindingSet bindings = null;
+			BindingSet bindings;
 
 			// the first result is subject 1 and has a score
 			int results = 0;
@@ -726,10 +725,9 @@ public abstract class AbstractGenericLuceneTest {
 	/**
 	 * Checks if reindexing does not corrupt the new index and if complex query still is evaluated properly.
 	 *
-	 * @throws Exception
 	 */
 	@Test
-	public void testReindexing() throws Exception {
+	public void testReindexing() {
 		sail.reindex();
 		testComplexQueryTwo();
 	}
@@ -760,7 +758,7 @@ public abstract class AbstractGenericLuceneTest {
 				// remove it from the set
 				Value subject = bindings.getValue("Resource");
 				IRI expectedProperty = expectedSubject.remove(subject);
-				assertEquals("For subject " + subject, expectedProperty, bindings.getValue("Property"));
+				assertEquals(expectedProperty, bindings.getValue("Property"), "For subject " + subject);
 			}
 
 			// there should have been 3 results
@@ -777,7 +775,7 @@ public abstract class AbstractGenericLuceneTest {
 		for (int i = 0; i < numThreads; i++) {
 			new Thread(new Runnable() {
 
-				private long iterationCount = 10 + Math.round(random.nextDouble() * 100);
+				private final long iterationCount = 10 + Math.round(random.nextDouble() * 100);
 
 				@Override
 				public void run() {
@@ -800,11 +798,11 @@ public abstract class AbstractGenericLuceneTest {
 		for (Throwable e : exceptions) {
 			e.printStackTrace(System.err);
 		}
-		assertEquals("Exceptions occurred during testMultithreadedAdd, see stacktraces above", 0, exceptions.size());
+		assertEquals(0, exceptions.size(), "Exceptions occurred during testMultithreadedAdd, see stacktraces above");
 	}
 
 	@Test
-	public void testIndexWriterState() throws Exception {
+	public void testIndexWriterState() {
 		final String brokenTrig = "{ broken }";
 		RepositoryConnection conn = repository.getConnection();
 		try (StringReader sr = new StringReader(brokenTrig)) {
@@ -820,31 +818,31 @@ public abstract class AbstractGenericLuceneTest {
 		conn.close();
 	}
 
-	protected void assertQueryResult(String literal, IRI predicate, Resource resultUri) throws Exception {
+	protected void assertQueryResult(String literal, IRI predicate, Resource resultUri) {
 		// fire a query for all subjects with a given term
 		String queryString = "SELECT ?Resource " + "WHERE { ?Resource <" + MATCHES + "> [ " + " <" + QUERY + "> \""
 				+ literal + "\" ]. } ";
 		TupleQuery query = connection.prepareTupleQuery(queryString);
 		try (TupleQueryResult result = query.evaluate()) {
 			// check the result
-			assertTrue("query for literal '" + literal + " did not return any results, expected was " + resultUri,
-					result.hasNext());
+			assertTrue(result.hasNext(),
+					"query for literal '" + literal + " did not return any results, expected was " + resultUri);
 			BindingSet bindings = result.next();
-			assertEquals("query for literal '" + literal + " did not return the expected resource", resultUri,
-					bindings.getValue("Resource"));
+			assertEquals(resultUri, bindings.getValue("Resource"),
+					"query for literal '" + literal + " did not return the expected resource");
 			assertFalse(result.hasNext());
 		}
 	}
 
-	protected void assertNoQueryResult(String literal) throws Exception {
+	protected void assertNoQueryResult(String literal) {
 		// fire a query for all subjects with a given term
 		String queryString = "SELECT ?Resource " + "WHERE { ?Resource <" + MATCHES + "> [ " + " <" + QUERY + "> \""
 				+ literal + "\" ]. } ";
 		TupleQuery query = connection.prepareTupleQuery(queryString);
 		try (TupleQueryResult result = query.evaluate()) {
 			// check the result
-			assertFalse("query for literal '" + literal + " did return results, which was not expected.",
-					result.hasNext());
+			assertFalse(result.hasNext(),
+					"query for literal '" + literal + " did return results, which was not expected.");
 		}
 	}
 

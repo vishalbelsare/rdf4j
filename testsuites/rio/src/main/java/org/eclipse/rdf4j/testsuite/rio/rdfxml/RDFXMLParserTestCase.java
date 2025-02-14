@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.testsuite.rio.rdfxml;
 
@@ -258,7 +261,7 @@ public abstract class RDFXMLParserTestCase {
 
 		private final Canonicalizer c14n;
 
-		public CanonXMLValueFactory() throws InvalidCanonicalizerException, ParserConfigurationException {
+		public CanonXMLValueFactory() throws InvalidCanonicalizerException {
 			org.apache.xml.security.Init.init();
 
 			c14n = Canonicalizer.getInstance(Canonicalizer.ALGO_ID_C14N_EXCL_OMIT_COMMENTS);

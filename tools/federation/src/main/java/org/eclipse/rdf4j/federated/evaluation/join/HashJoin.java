@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.federated.evaluation.join;
 
@@ -38,7 +41,7 @@ public class HashJoin extends JoinExecutorBase<BindingSet> {
 	private final QueryEvaluationStep rightPrepared;
 
 	public HashJoin(FederationEvalStrategy strategy,
-			CloseableIteration<BindingSet, QueryEvaluationException> leftIter,
+			CloseableIteration<BindingSet> leftIter,
 			TupleExpr rightArg, QueryEvaluationStep rightPrepared, Set<String> joinVars, BindingSet bindings,
 			QueryInfo queryInfo)
 			throws QueryEvaluationException {
@@ -125,7 +128,7 @@ public class HashJoin extends JoinExecutorBase<BindingSet> {
 	 * @param freeVariablesRight
 	 * @return the merged binding result
 	 */
-	static CloseableIteration<BindingSet, QueryEvaluationException> join(Collection<BindingSet> leftBlock,
+	static CloseableIteration<BindingSet> join(Collection<BindingSet> leftBlock,
 			Collection<BindingSet> rightBlock, Set<String> joinVariables, Collection<String> freeVariablesRight) {
 		List<BindingSet> res = new LinkedList<>();
 

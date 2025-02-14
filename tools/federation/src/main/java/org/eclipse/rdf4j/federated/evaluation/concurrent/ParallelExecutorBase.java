@@ -1,13 +1,15 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.federated.evaluation.concurrent;
 
-import java.lang.ref.WeakReference;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
@@ -26,13 +28,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Base class for common parallel executors such as {@link JoinExecutorBase} and {@link UnionExecutorBase}.
  *
- * @author Andreas Schwarte
- *
  * @param <T>
+ * @author Andreas Schwarte
  * @see JoinExecutorBase
  * @see UnionExecutorBase
  */
-public abstract class ParallelExecutorBase<T> extends LookAheadIteration<T, QueryEvaluationException>
+public abstract class ParallelExecutorBase<T> extends LookAheadIteration<T>
 		implements ParallelExecutor<T> {
 
 	protected static final Logger log = LoggerFactory.getLogger(ParallelExecutorBase.class);
@@ -46,8 +47,8 @@ public abstract class ParallelExecutorBase<T> extends LookAheadIteration<T, Quer
 
 	/* Variables */
 	protected volatile Thread evaluationThread;
-	protected FedXQueueCursor<T> rightQueue = FedXQueueCursor.create(1024, new WeakReference<>(this));
-	protected volatile CloseableIteration<T, QueryEvaluationException> rightIter;
+	protected FedXQueueCursor<T> rightQueue = FedXQueueCursor.create(1024);
+	protected volatile CloseableIteration<T> rightIter;
 	protected volatile boolean finished = false;
 
 	public ParallelExecutorBase(QueryInfo queryInfo) throws QueryEvaluationException {
@@ -64,6 +65,9 @@ public abstract class ParallelExecutorBase<T> extends LookAheadIteration<T, Quer
 		}
 
 		evaluationThread = Thread.currentThread();
+		if (evaluationThread.isInterrupted()) {
+			return;
+		}
 
 		if (log.isTraceEnabled()) {
 			log.trace("Performing execution of " + getDisplayId() + ", thread: " + evaluationThread.getName());
@@ -77,6 +81,9 @@ public abstract class ParallelExecutorBase<T> extends LookAheadIteration<T, Quer
 			}
 			done();
 
+		} catch (InterruptedException e) {
+			toss(ExceptionUtil.toException(e));
+			evaluationThread.interrupt();
 		} catch (Throwable t) {
 			toss(ExceptionUtil.toException(t));
 		} finally {
@@ -89,7 +96,7 @@ public abstract class ParallelExecutorBase<T> extends LookAheadIteration<T, Quer
 
 	/**
 	 * Perform the parallel execution.
-	 *
+	 * <p>
 	 * Note that this method must block until the execution is completed.
 	 *
 	 * @throws Exception
@@ -97,23 +104,25 @@ public abstract class ParallelExecutorBase<T> extends LookAheadIteration<T, Quer
 	protected abstract void performExecution() throws Exception;
 
 	@Override
-	public void addResult(CloseableIteration<T, QueryEvaluationException> res) {
-		/* optimization: avoid adding empty results */
-		if (res instanceof EmptyIteration<?, ?>) {
-			return;
-		}
-		if (isClosed() || rightQueue.isClosed()) {
-			res.close();
-			return;
-		}
+	public void addResult(CloseableIteration<T> res) {
 
 		try {
+			/* optimization: avoid adding empty results */
+			if (res instanceof EmptyIteration) {
+				return;
+			}
+			if (isClosed() || rightQueue.isClosed()) {
+				res.close();
+				return;
+			}
+
 			rightQueue.put(res);
 
 			if (isClosed() || rightQueue.isClosed()) {
 				res.close();
 			}
 		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
 			res.close();
 			throw new RuntimeException("Error adding element to right queue", e);
 		}
@@ -121,7 +130,7 @@ public abstract class ParallelExecutorBase<T> extends LookAheadIteration<T, Quer
 
 	@Override
 	public void done() {
-		; // no-op
+		// no-op
 	}
 
 	@Override
@@ -168,22 +177,21 @@ public abstract class ParallelExecutorBase<T> extends LookAheadIteration<T, Quer
 
 	@Override
 	public void handleClose() throws QueryEvaluationException {
-
 		try {
 			rightQueue.close();
 		} finally {
-
 			if (rightIter != null) {
 				try {
 					rightIter.close();
 					rightIter = null;
 				} catch (Throwable ignore) {
+					if (ignore instanceof InterruptedException) {
+						Thread.currentThread().interrupt();
+					}
 					log.trace("Failed to send interrupt signal:", ignore);
 				}
 			}
 		}
-
-		super.handleClose();
 	}
 
 	/**
@@ -213,7 +221,6 @@ public abstract class ParallelExecutorBase<T> extends LookAheadIteration<T, Quer
 	}
 
 	/**
-	 *
 	 * @return the executor type, e.g. "Join". Default "Executor"
 	 */
 	protected String getExecutorType() {

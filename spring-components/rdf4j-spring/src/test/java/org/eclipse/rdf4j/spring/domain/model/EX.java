@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.spring.domain.model;
@@ -12,8 +15,8 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 
 /**
- * @since 4.0.0
  * @author Florian Kleedorfer
+ * @since 4.0.0
  */
 public class EX {
 	private static final String base = "http://example.org/";
@@ -31,6 +34,7 @@ public class EX {
 	public static final IRI sunflowers = SimpleValueFactory.getInstance().createIRI(base, "sunflowers");
 	public static final IRI potatoEaters = SimpleValueFactory.getInstance().createIRI(base, "potatoEaters");
 	public static final IRI guernica = SimpleValueFactory.getInstance().createIRI(base, "guernica");
+	public static final IRI homeAddress = SimpleValueFactory.getInstance().createIRI(base, "homeAddress");
 
 	public static IRI of(String localName) {
 		return SimpleValueFactory.getInstance().createIRI(base, localName);

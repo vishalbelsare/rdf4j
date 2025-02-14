@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.federated;
 
@@ -11,11 +14,16 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
 
+import org.eclipse.rdf4j.collection.factory.api.CollectionFactory;
+import org.eclipse.rdf4j.collection.factory.mapdb.MapDb3CollectionFactory;
 import org.eclipse.rdf4j.common.transaction.IsolationLevels;
 import org.eclipse.rdf4j.federated.endpoint.Endpoint;
 import org.eclipse.rdf4j.federated.endpoint.ResolvableEndpoint;
 import org.eclipse.rdf4j.federated.evaluation.FederationEvaluationStrategyFactory;
+import org.eclipse.rdf4j.federated.evaluation.concurrent.DefaultSchedulerFactory;
+import org.eclipse.rdf4j.federated.evaluation.concurrent.SchedulerFactory;
 import org.eclipse.rdf4j.federated.exception.ExceptionUtil;
 import org.eclipse.rdf4j.federated.exception.FedXException;
 import org.eclipse.rdf4j.federated.exception.FedXRuntimeException;
@@ -58,6 +66,8 @@ public class FedX extends AbstractSail implements RepositoryResolverClient {
 
 	private FederationEvaluationStrategyFactory strategyFactory;
 
+	private SchedulerFactory schedulerFactory = DefaultSchedulerFactory.INSTANCE;
+
 	private WriteStrategyFactory writeStrategyFactory;
 
 	private File dataDir;
@@ -88,6 +98,19 @@ public class FedX extends AbstractSail implements RepositoryResolverClient {
 
 	public void setFederationEvaluationStrategy(FederationEvaluationStrategyFactory strategyFactory) {
 		this.strategyFactory = strategyFactory;
+	}
+
+	/* package */ SchedulerFactory getSchedulerFactory() {
+		return schedulerFactory;
+	}
+
+	/**
+	 * Set the {@link SchedulerFactory}. Can only be done before initialization of the federation
+	 *
+	 * @param schedulerFactory the {@link SchedulerFactory}
+	 */
+	public void setSchedulerFactory(SchedulerFactory schedulerFactory) {
+		this.schedulerFactory = schedulerFactory;
 	}
 
 	/**
@@ -221,7 +244,7 @@ public class FedX extends AbstractSail implements RepositoryResolverClient {
 			}
 		}
 
-		if (errors.size() > 0) {
+		if (!errors.isEmpty()) {
 			throw new SailException("Federation could not be shut down. See logs for details.");
 		}
 	}
@@ -237,5 +260,10 @@ public class FedX extends AbstractSail implements RepositoryResolverClient {
 	@Override
 	public void setRepositoryResolver(RepositoryResolver resolver) {
 		this.repositoryResolver = resolver;
+	}
+
+	@Override
+	public Supplier<CollectionFactory> getCollectionFactory() {
+		return () -> new MapDb3CollectionFactory(getIterationCacheSyncThreshold());
 	}
 }

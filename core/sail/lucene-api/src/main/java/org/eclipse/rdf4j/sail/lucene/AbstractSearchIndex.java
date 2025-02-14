@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.lucene;
 
@@ -38,6 +41,7 @@ import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.algebra.Var;
 import org.eclipse.rdf4j.query.algebra.evaluation.QueryBindingSet;
+import org.eclipse.rdf4j.sail.Sail;
 import org.eclipse.rdf4j.sail.SailException;
 import org.eclipse.rdf4j.sail.lucene.util.MapOfListMaps;
 import org.locationtech.spatial4j.context.SpatialContext;
@@ -62,7 +66,8 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 		REJECTED_DATATYPES.add("http://www.w3.org/2001/XMLSchema#float");
 	}
 
-	protected int maxDocs;
+	protected int defaultNumDocs = -1;
+	protected int maxDocs = Integer.MAX_VALUE;
 
 	protected Set<String> wktFields = Collections.singleton(SearchFields.getPropertyField(GEO.AS_WKT));
 
@@ -72,8 +77,29 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 
 	@Override
 	public void initialize(Properties parameters) throws Exception {
-		String maxDocParam = parameters.getProperty(LuceneSail.MAX_DOCUMENTS_KEY);
-		maxDocs = (maxDocParam != null) ? Integer.parseInt(maxDocParam) : -1;
+		String maxDocumentsParam = parameters.getProperty(LuceneSail.MAX_DOCUMENTS_KEY);
+		String defaultNumDocsParam = parameters.getProperty(LuceneSail.DEFAULT_NUM_DOCS_KEY);
+
+		if ((maxDocumentsParam != null)) {
+			maxDocs = Integer.parseInt(maxDocumentsParam);
+
+			// if maxDocs is set then defaultNumDocs is set to maxDocs if it is not set, because we now have a known
+			// upper limit
+			defaultNumDocs = (defaultNumDocsParam != null) ? Math.min(maxDocs, Integer.parseInt(defaultNumDocsParam))
+					: maxDocs;
+		} else {
+			// we can never return more than Integer.MAX_VALUE documents
+			maxDocs = Integer.MAX_VALUE;
+
+			// legacy behaviour is to return the number of documents that the query would return if there was no limit,
+			// so if the defaultNumDocs is not set, we set it to -1 to signal that there is no limit
+			defaultNumDocs = (defaultNumDocsParam != null) ? Integer.parseInt(defaultNumDocsParam) : -1;
+		}
+
+		if (defaultNumDocs > maxDocs) {
+			throw new IllegalArgumentException(LuceneSail.DEFAULT_NUM_DOCS_KEY + " must be less than or equal to "
+					+ LuceneSail.MAX_DOCUMENTS_KEY + " (" + defaultNumDocs + " > " + maxDocs + ")");
+		}
 
 		String wktFieldParam = parameters.getProperty(LuceneSail.WKT_FIELDS);
 		if (wktFieldParam != null) {
@@ -143,7 +169,7 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 
 		// we reject literals that aren't in the list of the indexed lang
 		if (indexedLangs != null
-				&& (!literal.getLanguage().isPresent()
+				&& (literal.getLanguage().isEmpty()
 						|| !indexedLangs.contains(literal.getLanguage().get().toLowerCase()
 						))) {
 			return false;
@@ -350,11 +376,8 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 									// remove value from both property field and the
 									// corresponding text field
 									String field = SearchFields.getPropertyField(r.getPredicate());
-									Set<String> removedValues = removedOfResource.get(field);
-									if (removedValues == null) {
-										removedValues = new HashSet<>();
-										removedOfResource.put(field, removedValues);
-									}
+									Set<String> removedValues = removedOfResource.computeIfAbsent(field,
+											k -> new HashSet<>());
 									removedValues.add(val);
 								}
 							}
@@ -532,23 +555,18 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 		Iterable<? extends DocumentScore> hits = null;
 
 		try {
-			// parse the query string to a lucene query
-
-			String sQuery = query.getQueryString();
-
-			if (!sQuery.isEmpty()) {
-				// if the query requests for the snippet, create a highlighter using
-				// this query
-				boolean highlight = (query.getSnippetVariableName() != null || query.getPropertyVariableName() != null);
+			if (query.getQueryPatterns()
+					.stream()
+					.map(QuerySpec.QueryParam::getQuery)
+					.anyMatch(s -> !s.isEmpty())) {
+				// at least one query isn't empty
 
 				// distinguish the two cases of subject == null
-				hits = query(query.getSubject(), query.getQueryString(), query.getPropertyURI(), highlight);
-			} else {
-				hits = null;
+				hits = query(query.getSubject(), query);
 			}
 		} catch (Exception e) {
-			logger.error("There was a problem evaluating query '" + query.getQueryString() + "' for property '"
-					+ query.getPropertyURI() + "!", e);
+			logger.error("There was a problem evaluating query '{}'!", query.getCatQuery(), e);
+			assert false : "There was a problem evaluating query '" + query.getCatQuery() + "'!";
 		}
 
 		return hits;
@@ -561,7 +579,7 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 	 * @return a LinkedHashSet containing generated bindings
 	 * @throws SailException
 	 */
-	private Collection<BindingSet> generateBindingSets(QuerySpec query, Iterable<? extends DocumentScore> hits)
+	private BindingSetCollection generateBindingSets(QuerySpec query, Iterable<? extends DocumentScore> hits)
 			throws SailException {
 		// Since one resource can be returned many times, it can lead now to
 		// multiple occurrences
@@ -571,7 +589,7 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 		// unique.
 		LinkedHashSet<BindingSet> bindingSets = new LinkedHashSet<>();
 
-		Set<String> bindingNames = new HashSet<>();
+		HashSet<String> bindingNames = new HashSet<>();
 		final String matchVar = query.getMatchesVariableName();
 		if (matchVar != null) {
 			bindingNames.add(matchVar);
@@ -580,13 +598,17 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 		if (scoreVar != null) {
 			bindingNames.add(scoreVar);
 		}
-		final String snippetVar = query.getSnippetVariableName();
-		if (snippetVar != null) {
-			bindingNames.add(snippetVar);
-		}
-		final String propertyVar = query.getPropertyVariableName();
-		if (propertyVar != null && query.getPropertyURI() == null) {
-			bindingNames.add(propertyVar);
+
+		for (QuerySpec.QueryParam param : query.getQueryPatterns()) {
+			final String snippetVar = param.getSnippetVarName();
+			if (snippetVar != null) {
+				bindingNames.add(snippetVar);
+			}
+
+			final String propertyVar = param.getPropertyVarName();
+			if (propertyVar != null && param.getProperty() == null) {
+				bindingNames.add(propertyVar);
+			}
 		}
 
 		if (hits != null) {
@@ -614,40 +636,72 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 					derivedBindings.addBinding(scoreVar, SearchFields.scoreToLiteral(score));
 				}
 
-				if (snippetVar != null || propertyVar != null) {
+				if (query.isHighlight()) {
 					if (hit.isHighlighted()) {
-						// limit to the queried field, if there was one
-						Collection<String> fields;
-						if (query.getPropertyURI() != null) {
-							String fieldname = SearchFields.getPropertyField(query.getPropertyURI());
-							fields = Collections.singleton(fieldname);
-						} else {
-							fields = doc.getPropertyNames();
-						}
+						Set<QueryBindingSet> reducedSet = query.getQueryPatterns()
+								.stream()
+								// ignore non highlighted param
+								.filter(QuerySpec.QueryParam::isHighlight)
+								.map(queryParam -> {
+									String snippetVar = queryParam.getSnippetVarName();
+									String propertyVar = queryParam.getPropertyVarName();
 
-						// extract snippets from Lucene's query results
-						for (String field : fields) {
-							Iterable<String> snippets = hit.getSnippets(field);
-							if (snippets != null) {
-								for (String snippet : snippets) {
-									if (snippet != null && !snippet.isEmpty()) {
-										// create an individual binding set for each
-										// snippet
-										QueryBindingSet snippetBindings = new QueryBindingSet(derivedBindings);
-
-										if (snippetVar != null) {
-											snippetBindings.addBinding(snippetVar, vf.createLiteral(snippet));
-										}
-
-										if (propertyVar != null && query.getPropertyURI() == null) {
-											snippetBindings.addBinding(propertyVar, vf.createIRI(field));
-										}
-
-										bindingSets.add(snippetBindings);
+									// limit to the queried field, if there was one
+									Collection<String> fields;
+									if (queryParam.getProperty() != null) {
+										String fieldname = SearchFields.getPropertyField(queryParam.getProperty());
+										fields = Collections.singleton(fieldname);
+									} else {
+										fields = doc.getPropertyNames();
 									}
-								}
-							}
-						}
+
+									// extract snippets from Lucene's query results
+									Set<QueryBindingSet> paramBindings = new HashSet<>();
+									for (String field : fields) {
+										Iterable<String> snippets = hit.getSnippets(field);
+										if (snippets != null) {
+											for (String snippet : snippets) {
+												if (snippet != null && !snippet.isEmpty()) {
+													// create an individual binding set for each
+													// snippet
+													QueryBindingSet snippetBindings = new QueryBindingSet();
+													if (snippetVar != null) {
+														snippetBindings.addBinding(snippetVar,
+																vf.createLiteral(snippet));
+													}
+
+													if (propertyVar != null && queryParam.getProperty() == null) {
+														snippetBindings.addBinding(propertyVar, vf.createIRI(field));
+													}
+
+													paramBindings.add(snippetBindings);
+												}
+											}
+										}
+									}
+									// return the bindings
+									return paramBindings;
+								})
+								.reduce(Set.of(derivedBindings), (bindingA, bindingB) -> {
+									// Edge case for a param without any binding
+									if (bindingA.isEmpty()) {
+										return bindingB;
+									}
+									if (bindingB.isEmpty()) {
+										return bindingA;
+									}
+									// Create the cartesian product of all bindings
+									Set<QueryBindingSet> paramBindings = new HashSet<>();
+									for (QueryBindingSet a : bindingA) {
+										for (QueryBindingSet b : bindingB) {
+											QueryBindingSet binding = new QueryBindingSet(a);
+											binding.addAll(b);
+											paramBindings.add(binding);
+										}
+									}
+									return paramBindings;
+								});
+						bindingSets.addAll(reducedSet);
 					} else {
 						logger.warn(
 								"Lucene Query requests snippet, but no highlighter was generated for it, no snippets will be generated!\n{}",
@@ -684,6 +738,8 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 		} catch (Exception e) {
 			logger.error("There was a problem evaluating distance query 'within " + distance + getUnitSymbol(units)
 					+ " of " + from.getLabel() + "'!", e);
+			assert false : "There was a problem evaluating distance query 'within " + distance + getUnitSymbol(units)
+					+ " of " + from.getLabel() + "'!";
 		}
 
 		return hits;
@@ -697,7 +753,7 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 		}
 	}
 
-	private Collection<BindingSet> generateBindingSets(DistanceQuerySpec query,
+	private BindingSetCollection generateBindingSets(DistanceQuerySpec query,
 			Iterable<? extends DocumentDistance> hits) throws SailException {
 		// Since one resource can be returned many times, it can lead now to
 		// multiple occurrences
@@ -707,7 +763,7 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 		// unique.
 		LinkedHashSet<BindingSet> bindingSets = new LinkedHashSet<>();
 
-		Set<String> bindingNames = new HashSet<>();
+		HashSet<String> bindingNames = new HashSet<>();
 		final String subjVar = query.getSubjectVar();
 		if (subjVar != null) {
 			bindingNames.add(subjVar);
@@ -792,12 +848,14 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 		} catch (Exception e) {
 			logger.error("There was a problem evaluating spatial relation query '" + query.getRelation() + " "
 					+ qgeom.getLabel() + "'!", e);
+			assert false : "There was a problem evaluating spatial relation query '" + query.getRelation() + " "
+					+ qgeom.getLabel() + "'!";
 		}
 
 		return hits;
 	}
 
-	private Collection<BindingSet> generateBindingSets(GeoRelationQuerySpec query,
+	private BindingSetCollection generateBindingSets(GeoRelationQuerySpec query,
 			Iterable<? extends DocumentResult> hits) throws SailException {
 		// Since one resource can be returned many times, it can lead now to
 		// multiple occurrences
@@ -807,7 +865,7 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 		// unique.
 		LinkedHashSet<BindingSet> bindingSets = new LinkedHashSet<>();
 
-		Set<String> bindingNames = new HashSet<>();
+		HashSet<String> bindingNames = new HashSet<>();
 		final String subjVar = query.getSubjectVar();
 		if (subjVar != null) {
 			bindingNames.add(subjVar);
@@ -896,8 +954,8 @@ public abstract class AbstractSearchIndex implements SearchIndex {
 
 	protected abstract void deleteDocument(SearchDocument doc) throws IOException;
 
-	protected abstract Iterable<? extends DocumentScore> query(Resource subject, String q, IRI property,
-			boolean highlight) throws MalformedQueryException, IOException;
+	protected abstract Iterable<? extends DocumentScore> query(Resource subject, QuerySpec param)
+			throws MalformedQueryException, IOException;
 
 	protected abstract Iterable<? extends DocumentDistance> geoQuery(IRI geoProperty, Point p, IRI units,
 			double distance, String distanceVar, Var context) throws MalformedQueryException, IOException;

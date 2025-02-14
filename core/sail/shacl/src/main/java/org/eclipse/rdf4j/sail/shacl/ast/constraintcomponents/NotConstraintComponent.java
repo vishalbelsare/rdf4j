@@ -1,20 +1,24 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl.ast.constraintcomponents;
 
+import java.util.List;
 import java.util.Set;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
-import org.eclipse.rdf4j.sail.shacl.ShaclSail;
 import org.eclipse.rdf4j.sail.shacl.SourceConstraintComponent;
 import org.eclipse.rdf4j.sail.shacl.ValidationSettings;
 import org.eclipse.rdf4j.sail.shacl.ast.Cache;
@@ -40,15 +44,15 @@ public class NotConstraintComponent extends AbstractConstraintComponent {
 	Shape not;
 
 	public NotConstraintComponent(Resource id, ShapeSource shapeSource,
-			Cache cache, ShaclSail shaclSail) {
+			Shape.ParseSettings parseSettings, Cache cache) {
 		super(id);
 
 		ShaclProperties p = new ShaclProperties(id, shapeSource);
 
 		if (p.getType() == SHACL.NODE_SHAPE) {
-			not = NodeShape.getInstance(p, shapeSource, cache, shaclSail);
+			not = NodeShape.getInstance(p, shapeSource, parseSettings, cache);
 		} else if (p.getType() == SHACL.PROPERTY_SHAPE) {
-			not = PropertyShape.getInstance(p, shapeSource, cache, shaclSail);
+			not = PropertyShape.getInstance(p, shapeSource, parseSettings, cache);
 		} else {
 			throw new IllegalStateException("Unknown shape type for " + p.getId());
 		}
@@ -97,7 +101,7 @@ public class NotConstraintComponent extends AbstractConstraintComponent {
 			planNodeProvider = overrideTargetNode;
 		} else {
 			planNodeProvider = () -> getAllTargetsPlan(connectionsGroup, validationSettings.getDataGraph(), scope,
-					stableRandomVariableProvider);
+					stableRandomVariableProvider, validationSettings);
 		}
 
 		PlanNode planNode = not.generateTransactionalValidationPlan(
@@ -107,7 +111,7 @@ public class NotConstraintComponent extends AbstractConstraintComponent {
 				scope
 		);
 
-		PlanNode invalid = Unique.getInstance(planNode, false);
+		PlanNode invalid = Unique.getInstance(planNode, false, connectionsGroup);
 
 		PlanNode allTargetsPlan;
 		if (overrideTargetNode != null) {
@@ -118,7 +122,8 @@ public class NotConstraintComponent extends AbstractConstraintComponent {
 						.extend(planNodeProvider.getPlanNode(), connectionsGroup, validationSettings.getDataGraph(),
 								Scope.nodeShape,
 								EffectiveTarget.Extend.right, false, null);
-				allTargetsPlan = Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan), true);
+				allTargetsPlan = Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan, connectionsGroup), true,
+						connectionsGroup);
 			} else {
 				allTargetsPlan = getTargetChain()
 						.getEffectiveTarget(scope, connectionsGroup.getRdfsSubClassOfReasoner(),
@@ -132,7 +137,7 @@ public class NotConstraintComponent extends AbstractConstraintComponent {
 			allTargetsPlan = planNodeProvider.getPlanNode();
 		}
 
-		invalid = new NotValuesIn(allTargetsPlan, invalid);
+		invalid = new NotValuesIn(allTargetsPlan, invalid, connectionsGroup);
 
 		return invalid;
 
@@ -161,7 +166,8 @@ public class NotConstraintComponent extends AbstractConstraintComponent {
 
 	@Override
 	public PlanNode getAllTargetsPlan(ConnectionsGroup connectionsGroup, Resource[] dataGraph, Scope scope,
-			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
+			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider,
+			ValidationSettings validationSettings) {
 		PlanNode allTargets;
 
 		if (scope == Scope.propertyShape) {
@@ -170,7 +176,8 @@ public class NotConstraintComponent extends AbstractConstraintComponent {
 							stableRandomVariableProvider)
 					.getPlanNode(connectionsGroup, dataGraph, Scope.nodeShape, true, null);
 
-			allTargets = Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan), true);
+			allTargets = Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan, connectionsGroup), true,
+					connectionsGroup);
 		} else {
 			allTargets = getTargetChain()
 					.getEffectiveTarget(scope, connectionsGroup.getRdfsSubClassOfReasoner(),
@@ -180,9 +187,10 @@ public class NotConstraintComponent extends AbstractConstraintComponent {
 		}
 
 		PlanNode notTargets = not.getAllTargetsPlan(connectionsGroup, dataGraph, scope,
-				new StatementMatcher.StableRandomVariableProvider());
+				new StatementMatcher.StableRandomVariableProvider(), validationSettings);
 
-		return Unique.getInstance(UnionNode.getInstanceDedupe(allTargets, notTargets), false);
+		return Unique.getInstance(UnionNode.getInstanceDedupe(connectionsGroup, allTargets, notTargets), false,
+				connectionsGroup);
 	}
 
 	@Override
@@ -196,5 +204,29 @@ public class NotConstraintComponent extends AbstractConstraintComponent {
 	public boolean requiresEvaluation(ConnectionsGroup connectionsGroup, Scope scope, Resource[] dataGraph,
 			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
 		return not.requiresEvaluation(connectionsGroup, scope, dataGraph, stableRandomVariableProvider);
+	}
+
+	@Override
+	public List<Literal> getDefaultMessage() {
+		return List.of();
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+
+		NotConstraintComponent that = (NotConstraintComponent) o;
+
+		return not.equals(that.not);
+	}
+
+	@Override
+	public int hashCode() {
+		return not.hashCode() + "NotConstraintComponent".hashCode();
 	}
 }

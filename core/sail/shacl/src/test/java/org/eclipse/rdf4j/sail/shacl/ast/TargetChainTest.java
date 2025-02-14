@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl.ast;
@@ -22,7 +25,7 @@ public class TargetChainTest {
 	public void testTargetChain() throws IOException, InterruptedException {
 		ShaclSail shaclSail = Utils.getInitializedShaclSail("shaclExactly.trig");
 
-		List<ContextWithShapes> shapes = shaclSail.getCachedShapes().getDataAndRelease();
+		List<ContextWithShape> shapes = shaclSail.getCachedShapes().getDataAndRelease();
 
 		shaclSail.shutDown();
 	}
@@ -31,11 +34,11 @@ public class TargetChainTest {
 	public void testTargetChainOr() throws IOException, InterruptedException {
 		ShaclSail shaclSail = Utils.getInitializedShaclSail("test-cases/or/maxCount/shacl.trig");
 
-		List<ContextWithShapes> shapes = shaclSail.getCachedShapes().getDataAndRelease();
+		List<ContextWithShape> shapes = shaclSail.getCachedShapes().getDataAndRelease();
 
-		assert shapes.get(0).getShapes().get(0) instanceof NodeShape;
+		assert shapes.get(0).getShape() instanceof NodeShape;
 
-		NodeShape nodeShape = (NodeShape) shapes.get(0).getShapes().get(0);
+		NodeShape nodeShape = (NodeShape) shapes.get(0).getShape();
 
 		assert nodeShape.getTargetChain().isOptimizable();
 

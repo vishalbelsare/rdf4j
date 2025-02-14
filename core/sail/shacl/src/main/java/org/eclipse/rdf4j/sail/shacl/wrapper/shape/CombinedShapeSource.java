@@ -1,11 +1,13 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
- *  All rights reserved. This program and the accompanying materials
- *  are made available under the terms of the Eclipse Distribution License v1.0
- *  which accompanies this distribution, and is available at
- *  http://www.eclipse.org/org/documents/edl-v10.php.
- ******************************************************************************/
-
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Distribution License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.sail.shacl.wrapper.shape;
 
 import java.util.Arrays;
@@ -15,15 +17,21 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.util.Statements;
 import org.eclipse.rdf4j.model.vocabulary.RDF4J;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.sail.SailConnection;
 
 public class CombinedShapeSource implements ShapeSource {
 
-	private final ForwardChainingShapeSource rdf4jShapesGraph;
+	private final Rdf4jShaclShapeGraphShapeSource rdf4jShapesGraph;
 	private final BackwardChainingShapeSource baseSail;
 	private final Resource[] context;
+
+	public CombinedShapeSource(SailConnection shapesForForwardChainingConnection,
+			SailConnection sailConnection) {
+		this(shapesForForwardChainingConnection, sailConnection, null);
+	}
 
 	public CombinedShapeSource(RepositoryConnection shapesForForwardChainingConnection,
 			SailConnection sailConnection) {
@@ -33,12 +41,20 @@ public class CombinedShapeSource implements ShapeSource {
 	private CombinedShapeSource(RepositoryConnection shapesForForwardChainingConnection,
 			SailConnection sailConnection,
 			Resource[] context) {
-		this.rdf4jShapesGraph = new ForwardChainingShapeSource(shapesForForwardChainingConnection);
+		this.rdf4jShapesGraph = new Rdf4jShaclShapeGraphShapeSource(shapesForForwardChainingConnection);
 		this.baseSail = new BackwardChainingShapeSource(sailConnection);
 		this.context = context;
 	}
 
-	private CombinedShapeSource(ForwardChainingShapeSource rdf4jShapesGraph, BackwardChainingShapeSource baseSail,
+	private CombinedShapeSource(SailConnection shapesForForwardChainingConnection,
+			SailConnection sailConnection,
+			Resource[] context) {
+		this.rdf4jShapesGraph = new Rdf4jShaclShapeGraphShapeSource(shapesForForwardChainingConnection);
+		this.baseSail = new BackwardChainingShapeSource(sailConnection);
+		this.context = context;
+	}
+
+	private CombinedShapeSource(Rdf4jShaclShapeGraphShapeSource rdf4jShapesGraph, BackwardChainingShapeSource baseSail,
 			Resource[] context) {
 		this.rdf4jShapesGraph = rdf4jShapesGraph;
 		this.baseSail = baseSail;
@@ -103,7 +119,9 @@ public class CombinedShapeSource implements ShapeSource {
 
 	public Stream<Statement> getAllStatements(Resource id) {
 		assert context != null;
-		return Stream.concat(rdf4jShapesGraph.getAllStatements(id), baseSail.getAllStatements(id)).distinct();
+		return Stream.concat(rdf4jShapesGraph.getAllStatements(id), baseSail.getAllStatements(id))
+				.map(Statements::stripContext)
+				.distinct();
 	}
 
 	public Value getRdfFirst(Resource subject) {

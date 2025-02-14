@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.base;
 
@@ -30,7 +33,7 @@ import org.eclipse.rdf4j.sail.Sail;
 import org.eclipse.rdf4j.sail.SailConnection;
 import org.eclipse.rdf4j.sail.SailException;
 import org.eclipse.rdf4j.sail.helpers.AbstractNotifyingSail;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Minimal tests for the functionality of {@link SnapshotSailStore}
@@ -151,7 +154,7 @@ public class SnapshotSailStoreTest {
 				return SimpleValueFactory.getInstance();
 			}
 		};
-	};
+	}
 
 	private SnapshotSailStore createSnapshotSailStore(Function<IsolationLevel, SailSink> sinkFactory) {
 		BackingSailSource dummySource = new BackingSailSource() {
@@ -168,7 +171,7 @@ public class SnapshotSailStoreTest {
 					}
 
 					@Override
-					public CloseableIteration<? extends Namespace, SailException> getNamespaces() throws SailException {
+					public CloseableIteration<? extends Namespace> getNamespaces() throws SailException {
 						return new EmptyIteration<>();
 					}
 
@@ -178,12 +181,12 @@ public class SnapshotSailStoreTest {
 					}
 
 					@Override
-					public CloseableIteration<? extends Resource, SailException> getContextIDs() throws SailException {
+					public CloseableIteration<? extends Resource> getContextIDs() throws SailException {
 						return new EmptyIteration<>();
 					}
 
 					@Override
-					public CloseableIteration<? extends Statement, SailException> getStatements(Resource subj, IRI pred,
+					public CloseableIteration<? extends Statement> getStatements(Resource subj, IRI pred,
 							Value obj,
 							Resource... contexts) throws SailException {
 						return new EmptyIteration<>();
@@ -215,6 +218,6 @@ public class SnapshotSailStoreTest {
 			@Override
 			public void close() throws SailException {
 			}
-		}, () -> new LinkedHashModel());
+		}, LinkedHashModel::new);
 	}
 }

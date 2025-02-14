@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.spin;
 
@@ -92,7 +95,7 @@ import org.eclipse.rdf4j.query.algebra.UpdateExpr;
 import org.eclipse.rdf4j.query.algebra.ValueConstant;
 import org.eclipse.rdf4j.query.algebra.ValueExpr;
 import org.eclipse.rdf4j.query.algebra.Var;
-import org.eclipse.rdf4j.query.algebra.helpers.QueryModelVisitorBase;
+import org.eclipse.rdf4j.query.algebra.helpers.AbstractQueryModelVisitor;
 import org.eclipse.rdf4j.query.parser.ParsedBooleanQuery;
 import org.eclipse.rdf4j.query.parser.ParsedDescribeQuery;
 import org.eclipse.rdf4j.query.parser.ParsedGraphQuery;
@@ -364,11 +367,11 @@ public class SpinRenderer {
 			if (isSubQuery) {
 				super.meet(node);
 			} else {
-				String varName = node.getSourceName();
+				String varName = node.getName();
 				ValueExpr valueExpr = inlineBindings.getValueExpr(varName);
 				Value value = (valueExpr instanceof ValueConstant) ? ((ValueConstant) valueExpr).getValue()
 						: getVar(varName);
-				String targetName = node.getTargetName();
+				String targetName = node.getProjectionAlias().orElse(null);
 				IRI pred;
 				if ("subject".equals(targetName)) {
 					pred = SP.SUBJECT_PROPERTY;
@@ -384,7 +387,7 @@ public class SpinRenderer {
 		}
 	}
 
-	private class SpinVisitor extends QueryModelVisitorBase<RDFHandlerException> {
+	private class SpinVisitor extends AbstractQueryModelVisitor<RDFHandlerException> {
 
 		final RDFHandler handler;
 
@@ -608,10 +611,10 @@ public class SpinRenderer {
 		public void meet(ProjectionElem node) throws RDFHandlerException {
 			ValueExpr valueExpr = null;
 			if (inlineBindings != null) {
-				String varName = node.getSourceName();
+				String varName = node.getName();
 				valueExpr = inlineBindings.getValueExpr(varName);
 			}
-			Resource targetVar = getVar(node.getTargetName());
+			Resource targetVar = getVar(node.getProjectionAlias().orElse(node.getName()));
 			listEntry(targetVar);
 			if (valueExpr != null && !(valueExpr instanceof Var)) {
 				Resource currentSubj = subject;
@@ -1335,7 +1338,7 @@ public class SpinRenderer {
 			}
 		}
 
-		private final class ExtensionVisitor extends QueryModelVisitorBase<RDFHandlerException> {
+		private final class ExtensionVisitor extends AbstractQueryModelVisitor<RDFHandlerException> {
 
 			@Override
 			public void meet(Count node) throws RDFHandlerException {
@@ -1434,7 +1437,7 @@ public class SpinRenderer {
 			}
 		}
 
-		private final class GroupVisitor extends QueryModelVisitorBase<RDFHandlerException> {
+		private final class GroupVisitor extends AbstractQueryModelVisitor<RDFHandlerException> {
 
 			Group group;
 
@@ -1483,7 +1486,7 @@ public class SpinRenderer {
 			}
 		}
 
-		private final class OrderVisitor extends QueryModelVisitorBase<RDFHandlerException> {
+		private final class OrderVisitor extends AbstractQueryModelVisitor<RDFHandlerException> {
 
 			@Override
 			public void meet(Order node) throws RDFHandlerException {
@@ -1511,7 +1514,7 @@ public class SpinRenderer {
 		}
 	}
 
-	private static final class ExtensionContext extends QueryModelVisitorBase<RuntimeException> {
+	private static final class ExtensionContext extends AbstractQueryModelVisitor<RuntimeException> {
 
 		Extension extension;
 

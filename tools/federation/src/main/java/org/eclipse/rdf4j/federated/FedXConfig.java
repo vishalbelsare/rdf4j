@@ -1,15 +1,20 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.federated;
 
 import java.util.Optional;
 
+import org.eclipse.rdf4j.collection.factory.api.CollectionFactory;
 import org.eclipse.rdf4j.federated.cache.SourceSelectionCache;
+import org.eclipse.rdf4j.federated.cache.SourceSelectionCacheFactory;
 import org.eclipse.rdf4j.federated.cache.SourceSelectionMemoryCache;
 import org.eclipse.rdf4j.federated.evaluation.concurrent.ControlledWorkerScheduler;
 import org.eclipse.rdf4j.federated.evaluation.concurrent.TaskWrapper;
@@ -36,11 +41,13 @@ public class FedXConfig {
 
 	private int leftJoinWorkerThreads = 10;
 
-	private int boundJoinBlockSize = 15;
+	private int boundJoinBlockSize = 25;
 
 	private int enforceMaxQueryTime = 30;
 
 	private boolean enableServiceAsBoundJoin = true;
+
+	private boolean enableOptionalAsBindJoin = true;
 
 	private boolean enableMonitoring = false;
 
@@ -53,6 +60,8 @@ public class FedXConfig {
 	private boolean includeInferredDefault = true;
 
 	private String sourceSelectionCacheSpec = null;
+
+	private SourceSelectionCacheFactory sourceSelectionCacheFactory = null;
 
 	private TaskWrapper taskWrapper = null;
 
@@ -236,6 +245,17 @@ public class FedXConfig {
 	}
 
 	/**
+	 * Whether OPTIONAL clauses are evaluated using bind join (i.e. with the VALUES clause). Default <i>true</i>
+	 *
+	 * @param flag
+	 * @return the current config.
+	 */
+	public FedXConfig withEnableOptionalAsBindJoin(boolean flag) {
+		this.enableOptionalAsBindJoin = flag;
+		return this;
+	}
+
+	/**
 	 * The cache specification for the {@link SourceSelectionMemoryCache}. If not set explicitly, the
 	 * {@link SourceSelectionMemoryCache#DEFAULT_CACHE_SPEC} is used.
 	 *
@@ -245,6 +265,18 @@ public class FedXConfig {
 	 */
 	public FedXConfig withSourceSelectionCacheSpec(String cacheSpec) {
 		this.sourceSelectionCacheSpec = cacheSpec;
+		return this;
+	}
+
+	/**
+	 * The {@link SourceSelectionCacheFactory} to be used. If not set explicitly, the default in memory implementation
+	 * is used with the configued {@link #getSourceSelectionCacheSpec()}.
+	 *
+	 * @param factory the {@link SourceSelectionCacheFactory}
+	 * @return the current config
+	 */
+	public FedXConfig withSourceSelectionCacheFactory(SourceSelectionCacheFactory factory) {
+		this.sourceSelectionCacheFactory = factory;
 		return this;
 	}
 
@@ -305,14 +337,24 @@ public class FedXConfig {
 	 * Returns a flag indicating whether vectored evaluation using the VALUES clause shall be applied for SERVICE
 	 * expressions.
 	 *
-	 * Default: false
+	 * Default: true
 	 *
-	 * Note: for todays endpoints it is more efficient to disable vectored evaluation of SERVICE.
-	 *
-	 * @return whether SERVICE expressions are evaluated using bound joins
+	 * @return whether SERVICE expressions are evaluated using bind joins
 	 */
 	public boolean getEnableServiceAsBoundJoin() {
 		return enableServiceAsBoundJoin;
+	}
+
+	/**
+	 * Returns a flag indicating whether bind join evaluation using the VALUES clause shall be applied for OPTIONAL
+	 * expressions.
+	 *
+	 * Default: true
+	 *
+	 * @return whether OPTIONAL expressions are evaluated using bind joins
+	 */
+	public boolean isEnableOptionalAsBindJoin() {
+		return enableOptionalAsBindJoin;
 	}
 
 	/**
@@ -395,10 +437,22 @@ public class FedXConfig {
 	 * Returns the configured {@link CacheBuilderSpec} (if any) for the {@link SourceSelectionMemoryCache}. If not
 	 * defined, the {@link SourceSelectionMemoryCache#DEFAULT_CACHE_SPEC} is used.
 	 *
+	 * If {@link #getSourceSelectionCacheFactory()} is configured, this setting is ignored.
+	 *
 	 * @return the {@link CacheBuilderSpec} or <code>null</code>
 	 */
 	public String getSourceSelectionCacheSpec() {
 		return this.sourceSelectionCacheSpec;
+	}
+
+	/**
+	 * Returns the {@link SourceSelectionCacheFactory} (if any). If not defined, the {@link SourceSelectionCache} is
+	 * instantiated using the default implementation and respects {@link #getSourceSelectionCacheSpec()}.
+	 *
+	 * @return {@link SourceSelectionCacheFactory}
+	 */
+	public SourceSelectionCacheFactory getSourceSelectionCacheFactory() {
+		return this.sourceSelectionCacheFactory;
 	}
 
 	/**
@@ -441,5 +495,21 @@ public class FedXConfig {
 	 */
 	public int getConsumingIterationMax() {
 		return consumingIterationMax;
+	}
+
+	/**
+	 * Set the CollectionFactory to be used by the federation
+	 *
+	 * <p>
+	 * Can only be set before federation initialization.
+	 * </p>
+	 *
+	 * @param cf
+	 * @return the current config
+	 * @deprecated unusedO
+	 */
+	@Deprecated(forRemoval = true)
+	public FedXConfig withCollectionFactory(CollectionFactory cf) {
+		return this;
 	}
 }

@@ -19,7 +19,7 @@ echo "The release script requires several external command line tools:"
 echo " - git"
 echo " - mvn"
 echo " - gh (the GitHub CLI, see https://github.com/cli/cli)"
-echo " - xmlllint (http://xmlsoft.org/xmllint.html)"
+echo " - xmllint (http://xmlsoft.org/xmllint.html)"
 
 echo ""
 echo "This script will stop if an unhandled error occurs";
@@ -66,26 +66,21 @@ if ! command -v xmllint &> /dev/null; then
     exit 1;
 fi
 
-# check Java version
-if  !  mvn -v | grep -q "Java version: 1.8."; then
-  echo "";
-  echo "Java 1.8 expected but not detected";
-  read -rp "Continue (y/n)?" choice
-  case "${choice}" in
-      y|Y ) echo "";;
-      n|N ) exit;;
-      * ) echo "unknown response, exiting"; exit;;
-  esac
-fi
+echo "Running git pull to make sure we are up to date"
+git pull
 
 # check that we are on main
-if  ! git status --porcelain --branch | grep -q "## main...origin/main"; then
+if  ! [[ $(git status --porcelain -u no  --branch) == "## main...origin/main" ]]; then
   echo""
   echo "You need to be on main!";
   echo "git checkout main";
   echo "";
   exit 1;
 fi
+
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean;
 
 echo "Running git pull to make sure we are up to date"
 git pull
@@ -112,8 +107,19 @@ if ! git push --dry-run > /dev/null 2>&1; then
     exit 1;
 fi
 
-echo "Running mvn clean";
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean -Dmaven.clean.failOnError=false
 mvn clean;
+git checkout develop;
+git pull;
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean;
+git checkout main;
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean;
+
 
 MVN_CURRENT_SNAPSHOT_VERSION=$(xmllint --xpath "//*[local-name()='project']/*[local-name()='version']/text()" pom.xml)
 
@@ -121,6 +127,32 @@ MVN_CURRENT_SNAPSHOT_VERSION=$(xmllint --xpath "//*[local-name()='project']/*[lo
 MVN_VERSION_RELEASE="${MVN_CURRENT_SNAPSHOT_VERSION/-SNAPSHOT/}"
 
 MVN_NEXT_SNAPSHOT_VERSION="$(increment_version "$MVN_VERSION_RELEASE" 3)-SNAPSHOT"
+
+BRANCH="releases/${MVN_VERSION_RELEASE}"
+
+RELEASE_NOTES_BRANCH="${MVN_VERSION_RELEASE}-release-notes"
+
+git checkout develop
+MVN_VERSION_DEVELOP=$(xmllint --xpath "//*[local-name()='project']/*[local-name()='version']/text()" pom.xml)
+git checkout main;
+
+cd scripts
+rm -rf temp
+mkdir temp
+echo "MVN_CURRENT_SNAPSHOT_VERSION=\"${MVN_CURRENT_SNAPSHOT_VERSION}\"" >> temp/constants.txt
+echo "MVN_VERSION_RELEASE=\"${MVN_VERSION_RELEASE}\"" >> temp/constants.txt
+echo "MVN_NEXT_SNAPSHOT_VERSION=\"${MVN_NEXT_SNAPSHOT_VERSION}\"" >> temp/constants.txt
+echo "BRANCH=\"${BRANCH}\"" >> temp/constants.txt
+echo "RELEASE_NOTES_BRANCH=\"${RELEASE_NOTES_BRANCH}\"" >> temp/constants.txt
+echo "MVN_VERSION_DEVELOP=\"${MVN_VERSION_DEVELOP}\"" >> temp/constants.txt
+cd ..
+
+echo "Running maven clean and install -DskipTests";
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean;
+mvn install -DskipTests;
+
 
 echo "";
 echo "Your current maven snapshot version is: '${MVN_CURRENT_SNAPSHOT_VERSION}'"
@@ -131,16 +163,9 @@ read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 # set maven version
 mvn versions:set -DnewVersion="${MVN_VERSION_RELEASE}"
 
-# set the MVN_VERSION_RELEASE version again just to be on the safe side
-MVN_VERSION_RELEASE=$(xmllint --xpath "//*[local-name()='project']/*[local-name()='version']/text()" pom.xml)
-
-# find out a way to test that we set the correct version!
-
 #Remove backup files. Finally, commit the version number changes:
 mvn versions:commit
 
-
-BRANCH="releases/${MVN_VERSION_RELEASE}"
 
 # delete old release branch if it exits
 if git show-ref --verify --quiet "refs/heads/${BRANCH}"; then
@@ -154,21 +179,14 @@ git tag "${MVN_VERSION_RELEASE}"
 
 echo "";
 echo "Pushing release branch to github"
-read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 
 # push release branch and tag
 git push -u origin "${BRANCH}"
 git push origin "${MVN_VERSION_RELEASE}"
 
-echo "";
-echo "You need to tell Jenkins to start the release deployment processes, for SDK and maven artifacts"
-echo "- SDK deployment: https://ci.eclipse.org/rdf4j/job/rdf4j-deploy-release-sdk/ "
-echo "- Maven deployment: https://ci.eclipse.org/rdf4j/job/rdf4j-deploy-release-ossrh/ "
-echo "(if you are on linux or windows, remember to use CTRL+SHIFT+C to copy)."
-echo "Log in, then choose 'Build with Parameters' and type in ${MVN_VERSION_RELEASE}"
-read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
-
 # Cleanup
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean -Dmaven.clean.failOnError=false
 mvn clean
 
 # Set a new SNAPSHOT version
@@ -191,21 +209,15 @@ git push
 
 echo "";
 echo "About to create PR"
-read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 echo "";
 
 echo "Creating pull request to merge release branch back into main"
-gh pr create --title "next development iteration: ${MVN_NEXT_SNAPSHOT_VERSION}" --body "Merge using merge commit rather than rebase"
+gh pr create -B main --title "next development iteration: ${MVN_NEXT_SNAPSHOT_VERSION}" --body "Merge using merge commit rather than rebase"
 
 echo "";
 echo "Preparing a merge-branch to merge into develop"
-read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 
 
-git checkout develop
-git pull
-
-MVN_VERSION_DEVELOP=$(xmllint --xpath "//*[local-name()='project']/*[local-name()='version']/text()" pom.xml)
 
 git checkout "${BRANCH}"
 
@@ -217,22 +229,34 @@ git push --set-upstream origin "merge_main_into_develop_after_release_${MVN_VERS
 
 echo "Creating pull request to merge the merge-branch into develop"
 gh pr create -B develop --title "sync develop branch after release ${MVN_VERSION_RELEASE}" --body "Merge using merge commit rather than rebase"
-echo "It's ok to merge this PR later, so wait for the Jenkins tests to finish."
+echo "It's ok to merge this PR later, so wait for the CI tests to finish."
 read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean -Dmaven.clean.failOnError=false
+
+git checkout develop
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean -Dmaven.clean.failOnError=false
 git checkout main
-mvn clean
+mvn clean -Dmaven.clean.failOnError=false
+mvn clean -Dmaven.clean.failOnError=false
 
 echo "Build javadocs"
-read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 
 git checkout "${MVN_VERSION_RELEASE}"
+
+# temporarily disable exiting on error
+set +e
 mvn clean
-mvn install -P quick
-mvn package -Passembly -DskipTests --batch-mode
+mvn install -DskipTests -Djapicmp.skip
+mvn package -Passembly -DskipTests -Djapicmp.skip
+set -e
+
+mvn package -Passembly -DskipTests -Djapicmp.skip
+
 
 git checkout main
-RELEASE_NOTES_BRANCH="${MVN_VERSION_RELEASE}-release-notes"
 git checkout -b "${RELEASE_NOTES_BRANCH}"
 
 tar -cvzf "site/static/javadoc/${MVN_VERSION_RELEASE}.tgz" -C target/site/apidocs .
@@ -240,7 +264,19 @@ cp -f "site/static/javadoc/${MVN_VERSION_RELEASE}.tgz" "site/static/javadoc/late
 git add --all
 git commit -s -a -m "javadocs for ${MVN_VERSION_RELEASE}"
 git push --set-upstream origin "${RELEASE_NOTES_BRANCH}"
-gh pr create -B main --title "${RELEASE_NOTES_BRANCH}" --body "Javadocs, release-notes and news item for ${MVN_VERSION_RELEASE}"
+BODY_CONTENT=$(cat <<EOF
+Javadocs, release-notes and news item for ${MVN_VERSION_RELEASE}.
+
+ - [ ] check that downloads.md is updated
+ - [ ] check that the release notes file is updated
+ - [ ] check that the news item file is updated
+ - [ ] check that [Jenkins](https://ci.eclipse.org/rdf4j/job/rdf4j-deploy-release-ossrh/) finished publishing the release
+ - [ ] check that [Jenkins](https://ci.eclipse.org/rdf4j/job/rdf4j-deploy-release-sdk/) finished publishing the sdk
+ - [ ] remember to also [add the release here on GitHub](https://github.com/eclipse-rdf4j/rdf4j/releases/new?tag=${MVN_VERSION_RELEASE}&title=RDF4J%20${MVN_VERSION_RELEASE}) (include announcement)
+EOF
+)
+
+gh pr create -B main --title "${MVN_VERSION_RELEASE} release notes" --body "$BODY_CONTENT"
 
 echo "Javadocs are in git branch ${RELEASE_NOTES_BRANCH}"
 
@@ -252,11 +288,17 @@ cd scripts
 echo ""
 echo "DONE!"
 
-
+echo "";
+echo "You need to tell Jenkins to start the release deployment processes, for SDK and maven artifacts"
+echo "- SDK deployment: https://ci.eclipse.org/rdf4j/job/rdf4j-deploy-release-sdk/ "
+echo "- Maven deployment: https://ci.eclipse.org/rdf4j/job/rdf4j-deploy-release-ossrh/ "
+echo "(if you are on linux or windows, remember to use CTRL+SHIFT+C to copy)."
+echo "Log in, then choose 'Build with Parameters' and type in ${MVN_VERSION_RELEASE}"
+read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 
 echo ""
 echo "You will now want to inform the community about the new release!"
-echo " - Check if all recently completed issues have the correct milestone: https://github.com/eclipse/rdf4j/projects/19"
+echo " - Check if all recently completed issues have the correct milestone: https://github.com/eclipse/rdf4j/issues?q=is%3Aissue+no%3Amilestone+-label%3A%22cannot+reproduce%22+-label%3A%22%F0%9F%94%A7+internal+task%22+-label%3Awontfix+-label%3Astale+-label%3Aduplicate+sort%3Aupdated-desc+is%3Aclosed"
 echo " - Create a new milestone for ${MVN_NEXT_SNAPSHOT_VERSION/-SNAPSHOT/} : https://github.com/eclipse/rdf4j/milestones/new"
 echo " - Close the ${MVN_VERSION_RELEASE} milestone: https://github.com/eclipse/rdf4j/milestones"
 echo "     - Make sure that all issues in the milestone are closed, or move them to the next milestone"

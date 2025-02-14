@@ -1,9 +1,12 @@
 /*******************************************************************************
- * .Copyright (c) 2020 Eclipse RDF4J contributors.
+ * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl.ast.planNodes;
@@ -12,7 +15,7 @@ import java.util.Objects;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
-import org.eclipse.rdf4j.sail.SailException;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 
 /**
  * @author Håvard Ottestad
@@ -24,25 +27,29 @@ public class LeftOuterJoin implements PlanNode {
 	private boolean printed = false;
 	private ValidationExecutionLogger validationExecutionLogger;
 
-	public LeftOuterJoin(PlanNode left, PlanNode right) {
-		left = PlanNodeHelper.handleSorting(this, left);
-		right = PlanNodeHelper.handleSorting(this, right);
+	public LeftOuterJoin(PlanNode left, PlanNode right, ConnectionsGroup connectionsGroup) {
+		this.left = PlanNodeHelper.handleSorting(this, left, connectionsGroup);
+		this.right = PlanNodeHelper.handleSorting(this, right, connectionsGroup);
 
-		this.left = left;
-		this.right = right;
 	}
 
 	@Override
-	public CloseableIteration<? extends ValidationTuple, SailException> iterator() {
+	public CloseableIteration<? extends ValidationTuple> iterator() {
 		return new LoggingCloseableIteration(this, validationExecutionLogger) {
 
-			final CloseableIteration<? extends ValidationTuple, SailException> leftIterator = left.iterator();
-			final CloseableIteration<? extends ValidationTuple, SailException> rightIterator = right.iterator();
+			CloseableIteration<? extends ValidationTuple> leftIterator;
+			CloseableIteration<? extends ValidationTuple> rightIterator;
 
 			ValidationTuple next;
 			ValidationTuple nextLeft;
 			ValidationTuple nextRight;
 			ValidationTuple prevLeft;
+
+			@Override
+			protected void init() {
+				leftIterator = left.iterator();
+				rightIterator = right.iterator();
+			}
 
 			void calculateNext() {
 				if (next != null) {
@@ -110,19 +117,26 @@ public class LeftOuterJoin implements PlanNode {
 			}
 
 			@Override
-			public void localClose() throws SailException {
-				leftIterator.close();
-				rightIterator.close();
+			public void localClose() {
+				try {
+					if (leftIterator != null) {
+						leftIterator.close();
+					}
+				} finally {
+					if (rightIterator != null) {
+						rightIterator.close();
+					}
+				}
 			}
 
 			@Override
-			protected boolean localHasNext() throws SailException {
+			protected boolean localHasNext() {
 				calculateNext();
 				return next != null;
 			}
 
 			@Override
-			protected ValidationTuple loggingNext() throws SailException {
+			protected ValidationTuple loggingNext() {
 				calculateNext();
 				ValidationTuple temp = next;
 				next = null;

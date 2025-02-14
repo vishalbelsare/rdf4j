@@ -1,14 +1,15 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl.ast.paths;
-
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -29,6 +30,7 @@ import org.eclipse.rdf4j.rio.WriterConfig;
 import org.eclipse.rdf4j.rio.helpers.BasicWriterSettings;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.eclipse.rdf4j.sail.shacl.wrapper.shape.RepositoryConnectionShapeSource;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class PathTest {
@@ -160,7 +162,7 @@ public class PathTest {
 
 		}
 
-		assertTrue(Models.isomorphic(actual, expected));
+		Assertions.assertTrue(Models.isomorphic(actual, expected));
 	}
 
 	private DynamicModel convertToPathAndBackToModel(Model expected) {
@@ -177,9 +179,7 @@ public class PathTest {
 					.map(s -> {
 						try (RepositoryConnectionShapeSource shapeSource = new RepositoryConnectionShapeSource(
 								connection).withContext(defaultContext)) {
-							Path path = Path.buildPath(
-									new RepositoryConnectionShapeSource(connection).withContext(defaultContext),
-									(Resource) s.getObject());
+							Path path = Path.buildPath(shapeSource, (Resource) s.getObject());
 
 							DynamicModel model = new DynamicModelFactory().createEmptyModel();
 							path.toModel((Resource) s.getObject(), null, model, new HashSet<>());

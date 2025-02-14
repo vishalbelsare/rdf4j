@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.federated.evaluation.join;
 
@@ -46,7 +49,7 @@ public class ParallelLeftJoinTask extends ParallelTaskBase<BindingSet> {
 	}
 
 	@Override
-	protected CloseableIteration<BindingSet, QueryEvaluationException> performTaskInternal() throws Exception {
+	protected CloseableIteration<BindingSet> performTaskInternal() throws Exception {
 
 		return new FedXLeftJoinIteration(strategy, join, leftBindings);
 
@@ -57,7 +60,7 @@ public class ParallelLeftJoinTask extends ParallelTaskBase<BindingSet> {
 		return joinControl;
 	}
 
-	static class FedXLeftJoinIteration extends LookAheadIteration<BindingSet, QueryEvaluationException> {
+	static class FedXLeftJoinIteration extends LookAheadIteration<BindingSet> {
 
 		protected final FederationEvalStrategy strategy;
 
@@ -71,9 +74,9 @@ public class ParallelLeftJoinTask extends ParallelTaskBase<BindingSet> {
 		 */
 		private final Set<String> scopeBindingNames;
 
-		private CloseableIteration<BindingSet, QueryEvaluationException> rightIter;
+		private CloseableIteration<BindingSet> rightIter;
 
-		private AtomicBoolean exhausted = new AtomicBoolean(false);
+		private final AtomicBoolean exhausted = new AtomicBoolean(false);
 
 		public FedXLeftJoinIteration(FederationEvalStrategy strategy, LeftJoin join, BindingSet leftBindings) {
 			super();
@@ -133,12 +136,8 @@ public class ParallelLeftJoinTask extends ParallelTaskBase<BindingSet> {
 
 		@Override
 		protected void handleClose() throws QueryEvaluationException {
-			try {
-				super.handleClose();
-			} finally {
-				if (rightIter != null) {
-					rightIter.close();
-				}
+			if (rightIter != null) {
+				rightIter.close();
 			}
 		}
 

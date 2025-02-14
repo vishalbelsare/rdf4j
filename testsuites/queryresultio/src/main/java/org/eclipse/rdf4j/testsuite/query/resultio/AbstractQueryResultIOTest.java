@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.testsuite.query.resultio;
@@ -17,8 +20,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -93,7 +94,7 @@ public abstract class AbstractQueryResultIOTest {
 	 */
 	protected TupleQueryResult parseTupleInternal(TupleQueryResultFormat format, InputStream in) throws IOException,
 			QueryResultParseException, TupleQueryResultHandlerException, UnsupportedQueryResultFormatException {
-		return QueryResultIO.parseTuple(in, format, new WeakReference<>(this));
+		return QueryResultIO.parseTuple(in, format, null);
 	}
 
 	/**
@@ -101,7 +102,7 @@ public abstract class AbstractQueryResultIOTest {
 	 * {@link org.eclipse.rdf4j.query.resultio.QueryResultIO#getParserFormatForFileName(java.lang.String)} .
 	 */
 	@Test
-	public final void testGetParserFormatForFileNameString() throws Exception {
+	public final void testGetParserFormatForFileNameString() {
 		String fileName = getFileName();
 
 		Optional<QueryResultFormat> format;
@@ -427,13 +428,11 @@ public abstract class AbstractQueryResultIOTest {
 		writer.handleLinks(links);
 		writer.endHeader();
 		writer.endHeader();
-		try {
+		try (input) {
 			while (input.hasNext()) {
 				BindingSet bindingSet = input.next();
 				writer.handleSolution(bindingSet);
 			}
-		} finally {
-			input.close();
 		}
 		writer.endQueryResult();
 
@@ -446,14 +445,13 @@ public abstract class AbstractQueryResultIOTest {
 	}
 
 	protected void assertQueryResultsEqual(TupleQueryResult expected, TupleQueryResult output)
-			throws QueryEvaluationException, TupleQueryResultHandlerException, QueryResultHandlerException,
-			UnsupportedEncodingException {
+			throws QueryEvaluationException, TupleQueryResultHandlerException, QueryResultHandlerException {
 		assertTrue(QueryResults.equals(expected, output));
 	}
 
 	protected void doTupleMissingStartQueryResult(TupleQueryResultFormat format, TupleQueryResult input,
 			TupleQueryResult expected, List<String> links, String stylesheetUrl) throws QueryResultHandlerException,
-			QueryEvaluationException, QueryResultParseException, UnsupportedQueryResultFormatException, IOException {
+			QueryEvaluationException, QueryResultParseException, UnsupportedQueryResultFormatException {
 		ByteArrayOutputStream out = new ByteArrayOutputStream(4096);
 		TupleQueryResultWriter writer = QueryResultIO.createTupleWriter(format, out);
 		// Test for handling when startDocument and startHeader are not called
@@ -462,7 +460,7 @@ public abstract class AbstractQueryResultIOTest {
 		writer.startHeader();
 		writer.handleLinks(links);
 		writer.endHeader();
-		try {
+		try (input) {
 			while (input.hasNext()) {
 				BindingSet bindingSet = input.next();
 				writer.handleSolution(bindingSet);
@@ -471,8 +469,6 @@ public abstract class AbstractQueryResultIOTest {
 			fail("Expected exception when calling handleSolution without startQueryResult");
 		} catch (IllegalStateException ise) {
 			// Expected exception
-		} finally {
-			input.close();
 		}
 	}
 
@@ -570,7 +566,7 @@ public abstract class AbstractQueryResultIOTest {
 	}
 
 	protected void doInvalidBooleanAfterStartQueryResult(BooleanQueryResultFormat format, boolean input,
-			List<String> links) throws IOException, QueryResultHandlerException, QueryResultParseException,
+			List<String> links) throws QueryResultHandlerException, QueryResultParseException,
 			UnsupportedQueryResultFormatException, QueryEvaluationException {
 		ByteArrayOutputStream out = new ByteArrayOutputStream(4096);
 		BooleanQueryResultWriter writer = QueryResultIO.createBooleanWriter(format, out);

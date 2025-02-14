@@ -1,22 +1,26 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.testsuite.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -37,6 +41,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
@@ -81,43 +87,27 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.RioSetting;
 import org.eclipse.rdf4j.rio.helpers.AbstractRDFHandler;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.Timeout;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
+@Timeout(value = 10, unit = TimeUnit.MINUTES)
 public abstract class RepositoryConnectionTest {
-
-	private final Logger logger = LoggerFactory.getLogger(RepositoryConnectionTest.class);
-
-	@BeforeClass
-	public static void setUpClass() throws Exception {
+	@BeforeAll
+	public static void setUpClass() {
 		// Turn off debugging for this test, as the cleanup processes are working correctly,
 		// but they debug a lot of information in testOrderByQueriesAreInterrupable
 		System.setProperty("org.eclipse.rdf4j.repository.debug", "false");
 	}
 
-	@Parameters(name = "{0}")
+	// FIXME: Cannot use EnumSource because this method is "overridden"
 	public static IsolationLevel[] parameters() {
 		return IsolationLevels.values();
 	}
-
-	/**
-	 * Timeout all individual tests after 10 minutes.
-	 */
-	@Rule
-	public Timeout to = new Timeout(10, TimeUnit.MINUTES);
-
-	private static final String URN_TEST_OTHER = "urn:test:other";
 
 	private static final String SPARQL_DEL_ALL = "DELETE { ?s ?p ?o } WHERE { ?s ?p ?o }";
 
@@ -197,19 +187,18 @@ public abstract class RepositoryConnectionTest {
 
 	protected Literal Александър;
 
-	protected IsolationLevel level;
-
-	public RepositoryConnectionTest(IsolationLevel level) {
-		this.level = level;
-	}
-
-	@Before
-	public void setUp() throws Exception {
-		testRepository = createRepository();
+	@BeforeEach
+	public void setUp(@TempDir File dataDir) throws Exception {
+		testRepository = createRepository(dataDir);
 
 		testCon = testRepository.getConnection();
+		testCon.begin();
 		testCon.clear();
 		testCon.clearNamespaces();
+		testCon.commit();
+	}
+
+	protected void setupTest(IsolationLevel level) {
 		testCon.setIsolationLevel(level);
 
 		testCon2 = testRepository.getConnection();
@@ -239,8 +228,8 @@ public abstract class RepositoryConnectionTest {
 		context2 = vf.createIRI("urn:x-local:graph2");
 	}
 
-	@After
-	public void tearDown() throws Exception {
+	@AfterEach
+	public void tearDown() {
 		try {
 			testCon2.close();
 		} finally {
@@ -257,52 +246,64 @@ public abstract class RepositoryConnectionTest {
 	 *
 	 * @return an uninitialized repository.
 	 */
-	protected abstract Repository createRepository() throws Exception;
+	protected abstract Repository createRepository(File dataDir) throws Exception;
 
-	@Test
-	public void testAddStatement() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddStatement(IsolationLevel level, @TempDir File dataDir) throws Exception {
+		setupTest(level);
+
 		testCon.add(bob, name, nameBob);
 
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(bob, name, nameBob, false));
+		assertTrue(testCon.hasStatement(bob, name, nameBob, false), NEWLY_ADDED);
 
 		Statement statement = vf.createStatement(alice, name, nameAlice);
 		testCon.add(statement);
 
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(statement, false));
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(alice, name, nameAlice, false));
+		assertTrue(testCon.hasStatement(statement, false), NEWLY_ADDED);
+		assertTrue(testCon.hasStatement(alice, name, nameAlice, false), NEWLY_ADDED);
 
-		Repository tempRep = createRepository();
-		try (RepositoryConnection con = tempRep.getConnection();) {
+		Repository tempRep = createRepository(dataDir);
+		try (RepositoryConnection con = tempRep.getConnection()) {
 
 			con.add(testCon.getStatements(null, null, null, false));
 
-			assertTrue("Temp Repository should contain newly added statement",
-					con.hasStatement(bob, name, nameBob, false));
+			assertTrue(con.hasStatement(bob, name, nameBob, false),
+					"Temp Repository should contain newly added statement");
 		} finally {
 			tempRep.shutDown();
 		}
 	}
 
-	@Test
-	public void testAddStatementWithContext() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddStatementWithContext(IsolationLevel level) {
+		setupTest(level);
+
 		Statement statement = vf.createStatement(alice, name, nameAlice, context1);
 		testCon.add(statement);
 
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(statement, false));
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(alice, name, nameAlice, false));
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(alice, name, nameAlice, false, context1));
+		assertTrue(testCon.hasStatement(statement, false), NEWLY_ADDED);
+		assertTrue(testCon.hasStatement(alice, name, nameAlice, false), NEWLY_ADDED);
+		assertTrue(testCon.hasStatement(alice, name, nameAlice, false, context1), NEWLY_ADDED);
 	}
 
-	@Test
-	public void testAddLiteralWithNewline() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddLiteralWithNewline(IsolationLevel level) {
+		setupTest(level);
+
 		Literal test = vf.createLiteral("this is a test\n");
 		testCon.add(bob, RDFS.LABEL, test);
 
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(bob, RDFS.LABEL, test, false));
+		assertTrue(testCon.hasStatement(bob, RDFS.LABEL, test, false), NEWLY_ADDED);
 	}
 
-	@Test
-	public void testTransactionIsolation() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testTransactionIsolation(IsolationLevel level) {
+		setupTest(level);
+
 		if (IsolationLevels.READ_UNCOMMITTED.isCompatibleWith(level)) {
 			return;
 		}
@@ -315,119 +316,140 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon2.hasStatement(bob, name, nameBob, false)).isTrue();
 	}
 
-	@Test
-	public void testAddReader() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddReader(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		try (Reader defaultGraph = new InputStreamReader(
 				RepositoryConnectionTest.class.getResourceAsStream(TEST_DIR_PREFIX + "default-graph.ttl"),
-				StandardCharsets.UTF_8);) {
+				StandardCharsets.UTF_8)) {
 			testCon.add(defaultGraph, "", RDFFormat.TURTLE);
 		}
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(null, publisher, nameBob, false));
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(null, publisher, nameAlice, false));
+		assertTrue(testCon.hasStatement(null, publisher, nameBob, false), NEWLY_ADDED);
+		assertTrue(testCon.hasStatement(null, publisher, nameAlice, false), NEWLY_ADDED);
 
 		// add file graph1.ttl to context1
 		try (InputStream graph1Stream = RepositoryConnectionTest.class
 				.getResourceAsStream(TEST_DIR_PREFIX + "graph1.ttl");
-				Reader graph1 = new InputStreamReader(graph1Stream, StandardCharsets.UTF_8);) {
+				Reader graph1 = new InputStreamReader(graph1Stream, StandardCharsets.UTF_8)) {
 			testCon.add(graph1, "", RDFFormat.TURTLE, context1);
 		}
 
 		// add file graph2.ttl to context2
 		try (InputStream graph2Stream = RepositoryConnectionTest.class
 				.getResourceAsStream(TEST_DIR_PREFIX + "graph2.ttl");
-				Reader graph2 = new InputStreamReader(graph2Stream, StandardCharsets.UTF_8);) {
+				Reader graph2 = new InputStreamReader(graph2Stream, StandardCharsets.UTF_8)) {
 			testCon.add(graph2, "", RDFFormat.TURTLE, context2);
 		}
-		assertTrue("alice should be known in the store", testCon.hasStatement(null, name, nameAlice, false));
-		assertFalse("alice should not be known in context1",
-				testCon.hasStatement(null, name, nameAlice, false, context1));
-		assertTrue("alice should be known in context2", testCon.hasStatement(null, name, nameAlice, false, context2));
-		assertTrue("bob should be known in the store", testCon.hasStatement(null, name, nameBob, false));
-		assertFalse("bob should not be known in context2", testCon.hasStatement(null, name, nameBob, false, context2));
-		assertTrue("bib should be known in context1", testCon.hasStatement(null, name, nameBob, false, context1));
+		assertTrue(testCon.hasStatement(null, name, nameAlice, false), "alice should be known in the store");
+		assertFalse(testCon.hasStatement(null, name, nameAlice, false, context1),
+				"alice should not be known in context1");
+		assertTrue(testCon.hasStatement(null, name, nameAlice, false, context2), "alice should be known in context2");
+		assertTrue(testCon.hasStatement(null, name, nameBob, false), "bob should be known in the store");
+		assertFalse(testCon.hasStatement(null, name, nameBob, false, context2), "bob should not be known in context2");
+		assertTrue(testCon.hasStatement(null, name, nameBob, false, context1), "bib should be known in context1");
 	}
 
-	@Test
-	public void testAddInputStream() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddInputStream(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		// add file default-graph.ttl to repository, no context
 		try (InputStream defaultGraph = RepositoryConnectionTest.class
-				.getResourceAsStream(TEST_DIR_PREFIX + "default-graph.ttl");) {
+				.getResourceAsStream(TEST_DIR_PREFIX + "default-graph.ttl")) {
 			testCon.add(defaultGraph, "", RDFFormat.TURTLE);
 		}
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(null, publisher, nameBob, false));
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(null, publisher, nameAlice, false));
+		assertTrue(testCon.hasStatement(null, publisher, nameBob, false), NEWLY_ADDED);
+		assertTrue(testCon.hasStatement(null, publisher, nameAlice, false), NEWLY_ADDED);
 
 		// add file graph1.ttl to context1
-		try (InputStream graph1 = RepositoryConnectionTest.class.getResourceAsStream(TEST_DIR_PREFIX + "graph1.ttl");) {
+		try (InputStream graph1 = RepositoryConnectionTest.class.getResourceAsStream(TEST_DIR_PREFIX + "graph1.ttl")) {
 			testCon.add(graph1, "", RDFFormat.TURTLE, context1);
 		}
 
 		// add file graph2.ttl to context2
-		try (InputStream graph2 = RepositoryConnectionTest.class.getResourceAsStream(TEST_DIR_PREFIX + "graph2.ttl");) {
+		try (InputStream graph2 = RepositoryConnectionTest.class.getResourceAsStream(TEST_DIR_PREFIX + "graph2.ttl")) {
 			testCon.add(graph2, "", RDFFormat.TURTLE, context2);
 		}
-		assertTrue("alice should be known in the store", testCon.hasStatement(null, name, nameAlice, false));
-		assertFalse("alice should not be known in context1",
-				testCon.hasStatement(null, name, nameAlice, false, context1));
-		assertTrue("alice should be known in context2", testCon.hasStatement(null, name, nameAlice, false, context2));
-		assertTrue("bob should be known in the store", testCon.hasStatement(null, name, nameBob, false));
-		assertFalse("bob should not be known in context2", testCon.hasStatement(null, name, nameBob, false, context2));
-		assertTrue("bib should be known in context1", testCon.hasStatement(null, name, nameBob, false, context1));
+		assertTrue(testCon.hasStatement(null, name, nameAlice, false), "alice should be known in the store");
+		assertFalse(testCon.hasStatement(null, name, nameAlice, false, context1),
+				"alice should not be known in context1");
+		assertTrue(testCon.hasStatement(null, name, nameAlice, false, context2), "alice should be known in context2");
+		assertTrue(testCon.hasStatement(null, name, nameBob, false), "bob should be known in the store");
+		assertFalse(testCon.hasStatement(null, name, nameBob, false, context2), "bob should not be known in context2");
+		assertTrue(testCon.hasStatement(null, name, nameBob, false, context1), "bib should be known in context1");
 	}
 
-	@Test
-	public void testAddInputStreamInTxn() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddInputStreamInTxn(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		// add file default-graph.ttl to repository, no context
 		try (InputStream defaultGraph = RepositoryConnectionTest.class
-				.getResourceAsStream(TEST_DIR_PREFIX + "default-graph.ttl");) {
+				.getResourceAsStream(TEST_DIR_PREFIX + "default-graph.ttl")) {
 			testCon.begin();
 			testCon.add(defaultGraph, "", RDFFormat.TURTLE);
 			testCon.commit();
 		}
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(null, publisher, nameBob, false));
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(null, publisher, nameAlice, false));
+		assertTrue(testCon.hasStatement(null, publisher, nameBob, false), NEWLY_ADDED);
+		assertTrue(testCon.hasStatement(null, publisher, nameAlice, false), NEWLY_ADDED);
 	}
 
-	@Test
-	public void testAddReaderInTxn() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddReaderInTxn(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		// add file default-graph.ttl to repository, no context
 
 		try (InputStream defaultGraph = RepositoryConnectionTest.class
 				.getResourceAsStream(TEST_DIR_PREFIX + "default-graph.ttl");
-				InputStreamReader reader = new InputStreamReader(defaultGraph);) {
+				InputStreamReader reader = new InputStreamReader(defaultGraph)) {
 			testCon.begin();
 			testCon.add(reader, "", RDFFormat.TURTLE);
 			testCon.commit();
 		}
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(null, publisher, nameBob, false));
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(null, publisher, nameAlice, false));
+		assertTrue(testCon.hasStatement(null, publisher, nameBob, false), NEWLY_ADDED);
+		assertTrue(testCon.hasStatement(null, publisher, nameAlice, false), NEWLY_ADDED);
 	}
 
-	@Test
-	public void testAddGzipInputStream() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddGzipInputStream(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		// add file default-graph.ttl to repository, no context
 		try (InputStream defaultGraph = RepositoryConnectionTest.class
-				.getResourceAsStream(TEST_DIR_PREFIX + "default-graph.ttl.gz");) {
+				.getResourceAsStream(TEST_DIR_PREFIX + "default-graph.ttl.gz")) {
 			testCon.add(defaultGraph, "", RDFFormat.TURTLE);
 		}
 
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(null, publisher, nameBob, false));
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(null, publisher, nameAlice, false));
+		assertTrue(testCon.hasStatement(null, publisher, nameBob, false), NEWLY_ADDED);
+		assertTrue(testCon.hasStatement(null, publisher, nameAlice, false), NEWLY_ADDED);
 
 	}
 
-	@Test
-	public void testAddZipFile() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddZipFile(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		testCon.add(RepositoryConnectionTest.class.getResourceAsStream(TEST_DIR_PREFIX + "graphs.zip"), "",
 				RDFFormat.TURTLE);
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(null, publisher, nameBob, false));
-		assertTrue(NEWLY_ADDED, testCon.hasStatement(null, publisher, nameAlice, false));
-		assertTrue("alice should be known in the store", testCon.hasStatement(null, name, nameAlice, false));
-		assertTrue("bob should be known in the store", testCon.hasStatement(null, name, nameBob, false));
+		assertTrue(testCon.hasStatement(null, publisher, nameBob, false), NEWLY_ADDED);
+		assertTrue(testCon.hasStatement(null, publisher, nameAlice, false), NEWLY_ADDED);
+		assertTrue(testCon.hasStatement(null, name, nameAlice, false), "alice should be known in the store");
+		assertTrue(testCon.hasStatement(null, name, nameBob, false), "bob should be known in the store");
 	}
 
-	@Test
-	public void testAddMalformedLiteralsDefaultConfig() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddMalformedLiteralsDefaultConfig(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		try {
 			testCon.add(RepositoryConnectionTest.class.getResourceAsStream(TEST_DIR_PREFIX + "malformed-literals.ttl"),
 					"", RDFFormat.TURTLE);
@@ -437,8 +459,11 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testAddMalformedLiteralsStrictConfig() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddMalformedLiteralsStrictConfig(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		Set<RioSetting<?>> empty = Collections.emptySet();
 		testCon.getParserConfig().setNonFatalErrors(empty);
 
@@ -452,54 +477,61 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testAutoCommit() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAutoCommit(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.begin();
 		testCon.add(alice, name, nameAlice);
 
-		assertTrue("Uncommitted update should be visible to own connection",
-				testCon.hasStatement(alice, name, nameAlice, false));
+		assertTrue(testCon.hasStatement(alice, name, nameAlice, false),
+				"Uncommitted update should be visible to own connection");
 
 		testCon.commit();
 
-		assertTrue("Repository should contain statement after commit",
-				testCon.hasStatement(alice, name, nameAlice, false));
+		assertTrue(testCon.hasStatement(alice, name, nameAlice, false),
+				"Repository should contain statement after commit");
 	}
 
-	@Test
-	public void testRollback() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testRollback(IsolationLevel level) {
+		setupTest(level);
+
 		if (IsolationLevels.NONE.isCompatibleWith(level)) {
 			return;
 		}
 		testCon.begin();
 		testCon.add(alice, name, nameAlice);
 
-		assertTrue("Uncommitted updates should be visible to own connection",
-				testCon.hasStatement(alice, name, nameAlice, false));
+		assertTrue(testCon.hasStatement(alice, name, nameAlice, false),
+				"Uncommitted updates should be visible to own connection");
 
 		testCon.rollback();
 
-		assertFalse("Repository should not contain statement after rollback",
-				testCon.hasStatement(alice, name, nameAlice, false));
+		assertFalse(testCon.hasStatement(alice, name, nameAlice, false),
+				"Repository should not contain statement after rollback");
 	}
 
-	@Test
-	public void testSimpleTupleQuery() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testSimpleTupleQuery(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(alice, name, nameAlice, context2);
 		testCon.add(alice, mbox, mboxAlice, context2);
 		testCon.add(context2, publisher, nameAlice);
 		testCon.add(bob, name, nameBob, context1);
 		testCon.add(bob, mbox, mboxBob, context1);
 		testCon.add(context1, publisher, nameBob);
-		StringBuilder queryBuilder = new StringBuilder(128);
-		queryBuilder.append(" PREFIX foaf: <" + FOAF_NS + "> \n");
-		queryBuilder.append(" SELECT ?name ?mbox");
-		queryBuilder.append(" WHERE { [] foaf:name ?name;");
-		queryBuilder.append("            foaf:mbox ?mbox. }");
+		String queryBuilder = " PREFIX foaf: <" + FOAF_NS + "> \n" +
+				" SELECT ?name ?mbox" +
+				" WHERE { [] foaf:name ?name;" +
+				"            foaf:mbox ?mbox. }";
 
-		try (TupleQueryResult result = testCon.prepareTupleQuery(queryBuilder.toString())
-				.evaluate();) {
-			assertThat(result).isNotNull();
+		try (TupleQueryResult result = testCon.prepareTupleQuery(queryBuilder).evaluate()) {
+			assertThat((Iterable<?>) result).isNotNull();
 			assertThat(result.hasNext()).isTrue();
 			while (result.hasNext()) {
 				BindingSet solution = result.next();
@@ -513,8 +545,10 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testPrepareSPARQLQuery() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testPrepareSPARQLQuery(IsolationLevel level) {
+		setupTest(level);
 
 		StringBuilder queryBuilder = new StringBuilder();
 		queryBuilder.append(" PREFIX foaf: <" + FOAF_NS + ">");
@@ -546,17 +580,18 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testSimpleTupleQueryUnicode() throws Exception {
-		testCon.add(alexander, name, Александър);
-		StringBuilder queryBuilder = new StringBuilder(128);
-		queryBuilder.append(" PREFIX foaf: <" + FOAF_NS + "> \n");
-		queryBuilder.append(" SELECT ?person");
-		queryBuilder.append(" WHERE { ?person foaf:name \"").append(Александър.getLabel()).append("\". }");
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testSimpleTupleQueryUnicode(IsolationLevel level) {
+		setupTest(level);
 
-		try (TupleQueryResult result = testCon.prepareTupleQuery(queryBuilder.toString())
-				.evaluate();) {
-			assertThat(result).isNotNull();
+		testCon.add(alexander, name, Александър);
+		String queryBuilder = " PREFIX foaf: <" + FOAF_NS + "> \n" +
+				" SELECT ?person" +
+				" WHERE { ?person foaf:name \"" + Александър.getLabel() + "\". }";
+
+		try (TupleQueryResult result = testCon.prepareTupleQuery(queryBuilder).evaluate()) {
+			assertThat((Iterable<?>) result).isNotNull();
 			assertThat(result.hasNext()).isTrue();
 			while (result.hasNext()) {
 				BindingSet solution = result.next();
@@ -566,24 +601,26 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testPreparedTupleQuery() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testPreparedTupleQuery(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(alice, name, nameAlice, context2);
 		testCon.add(alice, mbox, mboxAlice, context2);
 		testCon.add(context2, publisher, nameAlice);
 		testCon.add(bob, name, nameBob, context1);
 		testCon.add(bob, mbox, mboxBob, context1);
 		testCon.add(context1, publisher, nameBob);
-		StringBuilder queryBuilder = new StringBuilder();
-		queryBuilder.append(" PREFIX foaf: <" + FOAF_NS + "> \n");
-		queryBuilder.append(" SELECT ?name ?mbox \n");
-		queryBuilder.append(" WHERE { [] foaf:name ?name; \n");
-		queryBuilder.append("            foaf:mbox ?mbox . }");
-		TupleQuery query = testCon.prepareTupleQuery(queryBuilder.toString());
+		String queryBuilder = " PREFIX foaf: <" + FOAF_NS + "> \n" +
+				" SELECT ?name ?mbox \n" +
+				" WHERE { [] foaf:name ?name; \n" +
+				"            foaf:mbox ?mbox . }";
+		TupleQuery query = testCon.prepareTupleQuery(queryBuilder);
 		query.setBinding(NAME, nameBob);
 
-		try (TupleQueryResult result = query.evaluate();) {
-			assertThat(result).isNotNull();
+		try (TupleQueryResult result = query.evaluate()) {
+			assertThat((Iterable<?>) result).isNotNull();
 			assertThat(result.hasNext()).isTrue();
 			while (result.hasNext()) {
 				BindingSet solution = result.next();
@@ -591,26 +628,28 @@ public abstract class RepositoryConnectionTest {
 				assertThat(solution.hasBinding(MBOX)).isTrue();
 				Value nameResult = solution.getValue(NAME);
 				Value mboxResult = solution.getValue(MBOX);
-				assertEquals("unexpected value for name: " + nameResult, nameBob, nameResult);
-				assertEquals("unexpected value for mbox: " + mboxResult, mboxBob, mboxResult);
+				assertEquals(nameBob, nameResult, "unexpected value for name: " + nameResult);
+				assertEquals(mboxBob, mboxResult, "unexpected value for mbox: " + mboxResult);
 			}
 		}
 	}
 
-	@Test
-	public void testPreparedTupleQueryUnicode() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testPreparedTupleQueryUnicode(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(alexander, name, Александър);
 
-		StringBuilder queryBuilder = new StringBuilder();
-		queryBuilder.append(" PREFIX foaf: <" + FOAF_NS + "> \n");
-		queryBuilder.append(" SELECT ?person \n");
-		queryBuilder.append(" WHERE { ?person foaf:name ?name . }");
+		String queryBuilder = " PREFIX foaf: <" + FOAF_NS + "> \n" +
+				" SELECT ?person \n" +
+				" WHERE { ?person foaf:name ?name . }";
 
-		TupleQuery query = testCon.prepareTupleQuery(queryBuilder.toString());
+		TupleQuery query = testCon.prepareTupleQuery(queryBuilder);
 		query.setBinding(NAME, Александър);
 
-		try (TupleQueryResult result = query.evaluate();) {
-			assertThat(result).isNotNull();
+		try (TupleQueryResult result = query.evaluate()) {
+			assertThat((Iterable<?>) result).isNotNull();
 			assertThat(result.hasNext()).isTrue();
 
 			while (result.hasNext()) {
@@ -621,8 +660,11 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testSimpleGraphQuery() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testSimpleGraphQuery(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(alice, name, nameAlice, context2);
 		testCon.add(alice, mbox, mboxAlice, context2);
 		testCon.add(context2, publisher, nameAlice);
@@ -631,15 +673,13 @@ public abstract class RepositoryConnectionTest {
 		testCon.add(bob, mbox, mboxBob, context1);
 		testCon.add(context1, publisher, nameBob);
 
-		StringBuilder queryBuilder = new StringBuilder(128);
-		queryBuilder.append(" PREFIX foaf: <" + FOAF_NS + "> \n");
-		queryBuilder.append(" CONSTRUCT\n");
-		queryBuilder.append(" WHERE { [] foaf:name ?name;\n");
-		queryBuilder.append("            foaf:mbox ?mbox.}");
+		String queryBuilder = " PREFIX foaf: <" + FOAF_NS + "> \n" +
+				" CONSTRUCT\n" +
+				" WHERE { [] foaf:name ?name;\n" +
+				"            foaf:mbox ?mbox.}";
 
-		try (GraphQueryResult result = testCon.prepareGraphQuery(queryBuilder.toString())
-				.evaluate();) {
-			assertThat(result).isNotNull();
+		try (GraphQueryResult result = testCon.prepareGraphQuery(queryBuilder).evaluate()) {
+			assertThat((Iterable<?>) result).isNotNull();
 			assertThat(result.hasNext()).isTrue();
 
 			while (result.hasNext()) {
@@ -654,8 +694,11 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testPreparedGraphQuery() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testPreparedGraphQuery(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.begin();
 		testCon.add(alice, name, nameAlice, context2);
 		testCon.add(alice, mbox, mboxAlice, context2);
@@ -664,16 +707,15 @@ public abstract class RepositoryConnectionTest {
 		testCon.add(bob, mbox, mboxBob, context1);
 		testCon.add(context1, publisher, nameBob);
 		testCon.commit();
-		StringBuilder queryBuilder = new StringBuilder(128);
-		queryBuilder.append(" PREFIX foaf: <" + FOAF_NS + "> \n");
-		queryBuilder.append(" CONSTRUCT\n");
-		queryBuilder.append(" WHERE { [] foaf:name ?name;\n");
-		queryBuilder.append("            foaf:mbox ?mbox.}");
-		GraphQuery query = testCon.prepareGraphQuery(queryBuilder.toString());
+		String queryBuilder = " PREFIX foaf: <" + FOAF_NS + "> \n" +
+				" CONSTRUCT\n" +
+				" WHERE { [] foaf:name ?name;\n" +
+				"            foaf:mbox ?mbox.}";
+		GraphQuery query = testCon.prepareGraphQuery(queryBuilder);
 		query.setBinding(NAME, nameBob);
 
-		try (GraphQueryResult result = query.evaluate();) {
-			assertThat(result).isNotNull();
+		try (GraphQueryResult result = query.evaluate()) {
+			assertThat((Iterable<?>) result).isNotNull();
 			assertThat(result.hasNext()).isTrue();
 			while (result.hasNext()) {
 				Statement st = result.next();
@@ -681,17 +723,20 @@ public abstract class RepositoryConnectionTest {
 				assertThat(predicate).isIn(name, mbox);
 				Value object = st.getObject();
 				if (name.equals(predicate)) {
-					assertEquals("unexpected value for name: " + object, nameBob, object);
+					assertEquals(nameBob, object, "unexpected value for name: " + object);
 				} else {
 					assertThat(predicate).isEqualTo(mbox);
-					assertEquals("unexpected value for mbox: " + object, mboxBob, object);
+					assertEquals(mboxBob, object, "unexpected value for mbox: " + object);
 				}
 			}
 		}
 	}
 
-	@Test
-	public void testSimpleBooleanQuery() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testSimpleBooleanQuery(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(alice, name, nameAlice, context2);
 		testCon.add(alice, mbox, mboxAlice, context2);
 		testCon.add(context2, publisher, nameAlice);
@@ -700,18 +745,20 @@ public abstract class RepositoryConnectionTest {
 		testCon.add(bob, mbox, mboxBob, context1);
 		testCon.add(context1, publisher, nameBob);
 
-		StringBuilder queryBuilder = new StringBuilder(64);
-		queryBuilder.append(PREFIX_FOAF + FOAF_NS + "> ");
-		queryBuilder.append(ASK);
-		queryBuilder.append("{ ?p foaf:name ?name }");
+		String queryBuilder = PREFIX_FOAF + FOAF_NS + "> " +
+				ASK +
+				"{ ?p foaf:name ?name }";
 
-		boolean exists = testCon.prepareBooleanQuery(QueryLanguage.SPARQL, queryBuilder.toString()).evaluate();
+		boolean exists = testCon.prepareBooleanQuery(QueryLanguage.SPARQL, queryBuilder).evaluate();
 
 		assertThat(exists).isTrue();
 	}
 
-	@Test
-	public void testPreparedBooleanQuery() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testPreparedBooleanQuery(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(alice, name, nameAlice, context2);
 		testCon.add(alice, mbox, mboxAlice, context2);
 		testCon.add(context2, publisher, nameAlice);
@@ -720,19 +767,21 @@ public abstract class RepositoryConnectionTest {
 		testCon.add(bob, mbox, mboxBob, context1);
 		testCon.add(context1, publisher, nameBob);
 
-		StringBuilder queryBuilder = new StringBuilder();
-		queryBuilder.append(PREFIX_FOAF + FOAF_NS + "> ");
-		queryBuilder.append(ASK);
-		queryBuilder.append("{ ?p foaf:name ?name }");
+		String queryBuilder = PREFIX_FOAF + FOAF_NS + "> " +
+				ASK +
+				"{ ?p foaf:name ?name }";
 
-		BooleanQuery query = testCon.prepareBooleanQuery(QueryLanguage.SPARQL, queryBuilder.toString());
+		BooleanQuery query = testCon.prepareBooleanQuery(QueryLanguage.SPARQL, queryBuilder);
 		query.setBinding(NAME, nameBob);
 
 		assertThat(query.evaluate()).isTrue();
 	}
 
-	@Test
-	public void testDataset() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testDataset(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(alice, name, nameAlice, context2);
 		testCon.add(alice, mbox, mboxAlice, context2);
 		testCon.add(context2, publisher, nameAlice);
@@ -786,63 +835,72 @@ public abstract class RepositoryConnectionTest {
 		assertThat(query.evaluate()).isTrue();
 	}
 
-	@Test
-	public void testGetStatements() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testGetStatements(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(bob, name, nameBob);
 
-		assertTrue("Repository should contain statement", testCon.hasStatement(bob, name, nameBob, false));
+		assertTrue(testCon.hasStatement(bob, name, nameBob, false), "Repository should contain statement");
 
-		try (RepositoryResult<Statement> result = testCon.getStatements(null, name, null, false);) {
-			assertNotNull("Iterator should not be null", result);
-			assertTrue("Iterator should not be empty", result.hasNext());
+		try (RepositoryResult<Statement> result = testCon.getStatements(null, name, null, false)) {
+			assertNotNull(result, "Iterator should not be null");
+			assertTrue(result.hasNext(), "Iterator should not be empty");
 
 			while (result.hasNext()) {
 				Statement st = result.next();
-				assertNull("Statement should not be in a context ", st.getContext());
-				assertTrue("Statement predicate should be equal to name ", st.getPredicate().equals(name));
+				assertNull(st.getContext(), "Statement should not be in a context ");
+				assertEquals(st.getPredicate(), name, "Statement predicate should be equal to name ");
 			}
 		}
 
 		List<Statement> list = Iterations.addAll(testCon.getStatements(null, name, null, false), new ArrayList<>());
 
-		assertNotNull("List should not be null", list);
-		assertFalse("List should not be empty", list.isEmpty());
+		assertNotNull(list, "List should not be null");
+		assertFalse(list.isEmpty(), "List should not be empty");
 	}
 
-	@Test
-	public void testGetStatementsIterable() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testGetStatementsIterable(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(bob, name, nameBob);
 
-		assertTrue("Repository should contain statement", testCon.hasStatement(bob, name, nameBob, false));
+		assertTrue(testCon.hasStatement(bob, name, nameBob, false), "Repository should contain statement");
 
-		try (RepositoryResult<Statement> result = testCon.getStatements(null, name, null, false);) {
-			assertThat(result).isNotNull();
-			assertThat(result).isNotEmpty();
+		try (RepositoryResult<Statement> result = testCon.getStatements(null, name, null, false)) {
+			assertThat((Iterable<?>) result).isNotNull();
+			assertThat((Iterable<?>) result).isNotEmpty();
 
 			for (Statement st : result) {
 				assertThat(st.getContext()).isNull();
 				assertThat(st.getPredicate()).isEqualTo(name);
 			}
 
-			assertThat(result).isEmpty();
+			assertThat((Iterable<?>) result).isEmpty();
 			assertThat(result.isClosed()).isTrue();
 		}
 
 	}
 
-	@Test
-	public void testGetStatementsMalformedTypedLiteral() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testGetStatementsMalformedTypedLiteral(IsolationLevel level) {
+		setupTest(level);
+
 		Literal invalidIntegerLiteral = vf.createLiteral("the number four", XSD.INTEGER);
 		try {
 			IRI pred = vf.createIRI(URN_PRED);
 			testCon.add(bob, pred, invalidIntegerLiteral);
 
-			try (RepositoryResult<Statement> statements = testCon.getStatements(bob, pred, null, true);) {
+			try (RepositoryResult<Statement> statements = testCon.getStatements(bob, pred, null, true)) {
 				assertNotNull(statements);
 				assertTrue(statements.hasNext());
 				Statement st = statements.next();
 				assertTrue(st.getObject() instanceof Literal);
-				assertTrue(st.getObject().equals(invalidIntegerLiteral));
+				assertEquals(st.getObject(), invalidIntegerLiteral);
 			}
 		} catch (RepositoryException e) {
 			// shouldn't happen
@@ -850,19 +908,22 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testGetStatementsMalformedLanguageLiteral() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testGetStatementsMalformedLanguageLiteral(IsolationLevel level) {
+		setupTest(level);
+
 		Literal invalidLanguageLiteral = vf.createLiteral("the number four", "en_us");
 		try {
 			IRI pred = vf.createIRI(URN_PRED);
 			testCon.add(bob, pred, invalidLanguageLiteral);
 
-			try (RepositoryResult<Statement> statements = testCon.getStatements(bob, pred, null, true);) {
+			try (RepositoryResult<Statement> statements = testCon.getStatements(bob, pred, null, true)) {
 				assertNotNull(statements);
 				assertTrue(statements.hasNext());
 				Statement st = statements.next();
 				assertTrue(st.getObject() instanceof Literal);
-				assertTrue(st.getObject().equals(invalidLanguageLiteral));
+				assertEquals(st.getObject(), invalidLanguageLiteral);
 			}
 		} catch (RepositoryException e) {
 			e.printStackTrace();
@@ -871,8 +932,11 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testGetStatementsInSingleContext() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testGetStatementsInSingleContext(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.begin();
 		testCon.add(bob, name, nameBob, context1);
 		testCon.add(bob, mbox, mboxBob, context1);
@@ -881,14 +945,14 @@ public abstract class RepositoryConnectionTest {
 		testCon.add(alice, mbox, mboxAlice, context2);
 		testCon.add(context2, publisher, nameAlice);
 		testCon.commit();
-		assertTrue("Repository should contain statement", testCon.hasStatement(bob, name, nameBob, false));
-		assertTrue("Repository should contain statement in context1",
-				testCon.hasStatement(bob, name, nameBob, false, context1));
-		assertFalse("Repository should not contain statement in context2",
-				testCon.hasStatement(bob, name, nameBob, false, context2));
+		assertTrue(testCon.hasStatement(bob, name, nameBob, false), "Repository should contain statement");
+		assertTrue(testCon.hasStatement(bob, name, nameBob, false, context1),
+				"Repository should contain statement in context1");
+		assertFalse(testCon.hasStatement(bob, name, nameBob, false, context2),
+				"Repository should not contain statement in context2");
 
 		// Check handling of getStatements without context IDs
-		try (RepositoryResult<Statement> result = testCon.getStatements(bob, name, null, false);) {
+		try (RepositoryResult<Statement> result = testCon.getStatements(bob, name, null, false)) {
 			while (result.hasNext()) {
 				Statement st = result.next();
 				assertThat(st.getSubject()).isEqualTo(bob);
@@ -899,7 +963,7 @@ public abstract class RepositoryConnectionTest {
 		}
 
 		// Check handling of getStatements with a known context ID
-		try (RepositoryResult<Statement> result = testCon.getStatements(null, null, null, false, context1);) {
+		try (RepositoryResult<Statement> result = testCon.getStatements(null, null, null, false, context1)) {
 			while (result.hasNext()) {
 				Statement st = result.next();
 				assertThat(st.getContext()).isEqualTo(context1);
@@ -907,20 +971,23 @@ public abstract class RepositoryConnectionTest {
 		}
 
 		// Check handling of getStatements with an unknown context ID
-		try (RepositoryResult<Statement> result = testCon.getStatements(null, null, null, false, unknownContext);) {
-			assertThat(result).isNotNull();
+		try (RepositoryResult<Statement> result = testCon.getStatements(null, null, null, false, unknownContext)) {
+			assertThat((Iterable<?>) result).isNotNull();
 			assertThat(result.hasNext()).isFalse();
 		}
 
-		try (RepositoryResult<Statement> result = testCon.getStatements(null, name, null, false, context1);) {
+		try (RepositoryResult<Statement> result = testCon.getStatements(null, name, null, false, context1)) {
 			List<Statement> list = Iterations.addAll(result, new ArrayList<>());
-			assertNotNull("List should not be null", list);
-			assertFalse("List should not be empty", list.isEmpty());
+			assertNotNull(list, "List should not be null");
+			assertFalse(list.isEmpty(), "List should not be empty");
 		}
 	}
 
-	@Test
-	public void testGetStatementsInMultipleContexts() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testGetStatementsInMultipleContexts(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.clear();
 
 		testCon.begin();
@@ -930,7 +997,7 @@ public abstract class RepositoryConnectionTest {
 		testCon.commit();
 
 		// get statements with either no context or context2
-		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, null, context2);) {
+		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, null, context2)) {
 			int count = 0;
 			while (iter.hasNext()) {
 				count++;
@@ -938,14 +1005,14 @@ public abstract class RepositoryConnectionTest {
 				assertThat(st.getContext()).isIn(null, context2);
 			}
 
-			assertEquals("there should be three statements", 3, count);
+			assertEquals(3, count, "there should be three statements");
 		}
 
 		// get all statements with context1 or context2. Note that context1 and
 		// context2 are both known
 		// in the store because they have been created through the store's own
 		// value vf.
-		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, context1, context2);) {
+		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, context1, context2)) {
 			int count = 0;
 			while (iter.hasNext()) {
 				count++;
@@ -953,12 +1020,12 @@ public abstract class RepositoryConnectionTest {
 				// we should have _only_ statements from context2
 				assertThat(st.getContext()).isEqualTo(context2);
 			}
-			assertEquals("there should be two statements", 2, count);
+			assertEquals(2, count, "there should be two statements");
 		}
 
 		// get all statements with unknownContext or context2.
 		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, unknownContext,
-				context2);) {
+				context2)) {
 			int count = 0;
 			while (iter.hasNext()) {
 				count++;
@@ -966,7 +1033,7 @@ public abstract class RepositoryConnectionTest {
 				// we should have _only_ statements from context2
 				assertThat(st.getContext()).isEqualTo(context2);
 			}
-			assertEquals("there should be two statements", 2, count);
+			assertEquals(2, count, "there should be two statements");
 		}
 
 		// add statements to context1
@@ -976,13 +1043,13 @@ public abstract class RepositoryConnectionTest {
 		testCon.add(context1, publisher, nameBob);
 		testCon.commit();
 
-		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, context1);) {
-			assertThat(iter).isNotNull();
+		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, context1)) {
+			assertThat((Iterable<?>) iter).isNotNull();
 			assertThat(iter.hasNext()).isTrue();
 		}
 
 		// get statements with either no context or context2
-		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, null, context2);) {
+		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, null, context2)) {
 			int count = 0;
 			while (iter.hasNext()) {
 				count++;
@@ -991,30 +1058,33 @@ public abstract class RepositoryConnectionTest {
 				// context
 				assertThat(st.getContext()).isIn(null, context2);
 			}
-			assertEquals("there should be four statements", 4, count);
+			assertEquals(4, count, "there should be four statements");
 		}
 
 		// get all statements with context1 or context2
-		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, context1, context2);) {
+		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, context1, context2)) {
 			int count = 0;
 			while (iter.hasNext()) {
 				count++;
 				Statement st = iter.next();
 				assertThat(st.getContext()).isIn(context1, context2);
 			}
-			assertEquals("there should be four statements", 4, count);
+			assertEquals(4, count, "there should be four statements");
 		}
 	}
 
-	@Test
-	public void testDuplicateFilter() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testDuplicateFilter(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.begin();
 		testCon.add(bob, name, nameBob);
 		testCon.add(bob, name, nameBob, context1);
 		testCon.add(bob, name, nameBob, context2);
 		testCon.commit();
 
-		try (RepositoryResult<Statement> result = testCon.getStatements(bob, name, null, true);) {
+		try (RepositoryResult<Statement> result = testCon.getStatements(bob, name, null, true)) {
 			result.enableDuplicateFilter();
 			int count = 0;
 			while (result.hasNext()) {
@@ -1028,8 +1098,11 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testRemoveStatements() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testRemoveStatements(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.begin();
 		testCon.add(bob, name, nameBob);
 		testCon.add(alice, name, nameAlice);
@@ -1048,8 +1121,11 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon.isEmpty()).isTrue();
 	}
 
-	@Test
-	public void testRemoveStatementWithContext() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testRemoveStatementWithContext(IsolationLevel level) {
+		setupTest(level);
+
 		Statement statement = vf.createStatement(alice, name, nameAlice, context1);
 		testCon.add(statement);
 
@@ -1063,8 +1139,11 @@ public abstract class RepositoryConnectionTest {
 
 	}
 
-	@Test
-	public void testRemoveStatementCollection() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testRemoveStatementCollection(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.begin();
 		testCon.add(alice, name, nameAlice);
 		testCon.add(bob, name, nameBob);
@@ -1073,7 +1152,7 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon.hasStatement(bob, name, nameBob, false)).isTrue();
 		assertThat(testCon.hasStatement(alice, name, nameAlice, false)).isTrue();
 
-		try (RepositoryResult<Statement> result = testCon.getStatements(null, null, null, false);) {
+		try (RepositoryResult<Statement> result = testCon.getStatements(null, null, null, false)) {
 			Collection<Statement> c = Iterations.addAll(result, new ArrayList<>());
 
 			testCon.remove(c);
@@ -1083,8 +1162,11 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testRemoveStatementIteration() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testRemoveStatementIteration(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.begin();
 		testCon.add(alice, name, nameAlice);
 		testCon.add(bob, name, nameBob);
@@ -1093,8 +1175,8 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon.hasStatement(bob, name, nameBob, false)).isTrue();
 		assertThat(testCon.hasStatement(alice, name, nameAlice, false)).isTrue();
 
-		try (CloseableIteration<? extends Statement, RepositoryException> iter = testCon.getStatements(null, null, null,
-				false);) {
+		try (CloseableIteration<? extends Statement> iter = testCon.getStatements(null, null, null,
+				false)) {
 			testCon.remove(iter);
 		}
 
@@ -1102,8 +1184,11 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon.hasStatement(alice, name, nameAlice, false)).isFalse();
 	}
 
-	@Test
-	public void testGetNamespace() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testGetNamespace(IsolationLevel level) {
+		setupTest(level);
+
 		setupNamespaces();
 		assertThat(testCon.getNamespace(EXAMPLE)).isEqualTo(EXAMPLE_NS);
 		assertThat(testCon.getNamespace(RDFS_PREFIX)).isEqualTo(RDFS_NS);
@@ -1111,8 +1196,11 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon.getNamespace("undefined")).isNull();
 	}
 
-	@Test
-	public void testGetNamespaces() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testGetNamespaces(IsolationLevel level) {
+		setupTest(level);
+
 		setupNamespaces();
 		Map<String, String> map = Namespaces.asMap(Iterations.asSet(testCon.getNamespaces()));
 		assertThat(map.size()).isEqualTo(3);
@@ -1122,7 +1210,26 @@ public abstract class RepositoryConnectionTest {
 		assertThat(map.get(RDF_PREFIX)).isEqualTo("http://www.w3.org/1999/02/22-rdf-syntax-ns#");
 	}
 
-	private void setupNamespaces() throws IOException, RDFParseException, RepositoryException {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testImportNamespacesFromIterable(IsolationLevel level) {
+		setupTest(level);
+
+		Model nsAwareModel = new LinkedHashModel();
+		nsAwareModel.setNamespace(RDFS_PREFIX, RDFS_NS);
+		nsAwareModel.setNamespace(EXAMPLE, EXAMPLE_NS);
+
+		testCon.add(nsAwareModel);
+		assertThat(testCon.getNamespace(RDFS_PREFIX)).isEqualTo(RDFS_NS);
+		assertThat(testCon.getNamespace(EXAMPLE)).isEqualTo(EXAMPLE_NS);
+
+		// Test that existing namespaces are not overwritten
+		nsAwareModel.setNamespace(EXAMPLE, "http://something.else/");
+		testCon.add(nsAwareModel);
+		assertThat(testCon.getNamespace(EXAMPLE)).isEqualTo(EXAMPLE_NS);
+	}
+
+	private void setupNamespaces() throws RDFParseException, RepositoryException {
 		testCon.setNamespace(EXAMPLE, EXAMPLE_NS);
 		testCon.setNamespace(RDF_PREFIX, "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
 		testCon.setNamespace(RDFS_PREFIX, RDFS_NS);
@@ -1131,16 +1238,22 @@ public abstract class RepositoryConnectionTest {
 		testCon.add(vf.createIRI(EXAMPLE_NS, "Main"), vf.createIRI(RDFS_NS, "label"), vf.createLiteral("Main Node"));
 	}
 
-	@Test
-	public void testClear() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testClear(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(bob, name, nameBob);
 		assertThat(testCon.hasStatement(null, name, nameBob, false)).isTrue();
 		testCon.clear();
 		assertThat(testCon.hasStatement(null, name, nameBob, false)).isFalse();
 	}
 
-	@Test
-	public void testRecoverFromParseError() throws RepositoryException, IOException {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testRecoverFromParseError(IsolationLevel level) throws RepositoryException, IOException {
+		setupTest(level);
+
 		String invalidData = "bad";
 		String validData = "@prefix foo: <http://example.org/foo#>.\nfoo:a foo:b foo:c.";
 
@@ -1157,16 +1270,19 @@ public abstract class RepositoryConnectionTest {
 			fail("Valid data should not result in an exception");
 		}
 
-		assertEquals("Repository contains incorrect number of statements", 1, testCon.size());
+		assertEquals(1, testCon.size(), "Repository contains incorrect number of statements");
 	}
 
-	@Test
-	public void testStatementSerialization() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testStatementSerialization(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		testCon.add(bob, name, nameBob);
 
 		Statement st;
 
-		try (RepositoryResult<Statement> statements = testCon.getStatements(null, null, null, true);) {
+		try (RepositoryResult<Statement> statements = testCon.getStatements(null, null, null, true)) {
 			st = statements.next();
 		}
 
@@ -1186,12 +1302,15 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon.hasStatement(deserialized, true)).isTrue();
 	}
 
-	@Test
-	public void testBNodeSerialization() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testBNodeSerialization(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		testCon.add(bob, name, nameBob);
 
 		Statement st;
-		try (RepositoryResult<Statement> statements = testCon.getStatements(null, null, null, false);) {
+		try (RepositoryResult<Statement> statements = testCon.getStatements(null, null, null, false)) {
 			st = statements.next();
 		}
 
@@ -1213,12 +1332,15 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon.hasStatement(deserializedBNode, name, nameBob, true)).isTrue();
 	}
 
-	@Test
-	public void testURISerialization() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testURISerialization(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		testCon.add(bob, name, nameBob);
 
 		Statement st;
-		try (RepositoryResult<Statement> statements = testCon.getStatements(null, null, null, false);) {
+		try (RepositoryResult<Statement> statements = testCon.getStatements(null, null, null, false)) {
 			st = statements.next();
 		}
 
@@ -1240,12 +1362,15 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon.hasStatement(bob, deserializedURI, nameBob, true)).isTrue();
 	}
 
-	@Test
-	public void testLiteralSerialization() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testLiteralSerialization(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		testCon.add(bob, name, nameBob);
 
 		Statement st;
-		try (RepositoryResult<Statement> statements = testCon.getStatements(null, null, null, false);) {
+		try (RepositoryResult<Statement> statements = testCon.getStatements(null, null, null, false)) {
 			st = statements.next();
 		}
 
@@ -1267,12 +1392,15 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon.hasStatement(bob, name, deserialized, true)).isTrue();
 	}
 
-	@Test
-	public void testGraphSerialization() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testGraphSerialization(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		testCon.add(bob, name, nameBob);
 		testCon.add(alice, name, nameAlice);
 
-		try (RepositoryResult<Statement> statements = testCon.getStatements(null, null, null, true);) {
+		try (RepositoryResult<Statement> statements = testCon.getStatements(null, null, null, true)) {
 			Model graph = Iterations.addAll(statements, new LinkedHashModel());
 
 			ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -1294,8 +1422,11 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testEmptyRollback() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testEmptyRollback(IsolationLevel level) {
+		setupTest(level);
+
 		if (IsolationLevels.NONE.isCompatibleWith(level)) {
 			return;
 		}
@@ -1310,8 +1441,11 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon2.isEmpty()).isTrue();
 	}
 
-	@Test
-	public void testEmptyCommit() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testEmptyCommit(IsolationLevel level) {
+		setupTest(level);
+
 		if (IsolationLevels.NONE.isCompatibleWith(level)) {
 			return;
 		}
@@ -1326,8 +1460,11 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon2.isEmpty()).isFalse();
 	}
 
-	@Test
-	public void testOpen() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testOpen(IsolationLevel level) {
+		setupTest(level);
+
 		assertThat(testCon.isOpen()).isTrue();
 		assertThat(testCon2.isOpen()).isTrue();
 		testCon.close();
@@ -1335,8 +1472,11 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon2.isOpen()).isTrue();
 	}
 
-	@Test
-	public void testSizeRollback() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testSizeRollback(IsolationLevel level) {
+		setupTest(level);
+
 		if (IsolationLevels.NONE.isCompatibleWith(level)) {
 			return;
 		}
@@ -1354,8 +1494,11 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon2.size()).isEqualTo(0L);
 	}
 
-	@Test
-	public void testSizeCommit() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testSizeCommit(IsolationLevel level) {
+		setupTest(level);
+
 		if (IsolationLevels.NONE.isCompatibleWith(level)) {
 			return;
 		}
@@ -1373,19 +1516,25 @@ public abstract class RepositoryConnectionTest {
 		assertThat(testCon2.size()).isEqualTo(2L);
 	}
 
-	@Test
-	public void testSizeDuplicateStatement() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testSizeDuplicateStatement(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.begin();
 		testCon.add(RDF.SUBJECT, RDF.PREDICATE, RDF.OBJECT);
 		testCon.commit();
 		testCon.begin();
 		testCon.add(RDF.SUBJECT, RDF.PREDICATE, RDF.OBJECT);
-		assertEquals("Statement should appear once", 1, testCon.size());
+		assertEquals(1, testCon.size(), "Statement should appear once");
 		testCon.commit();
 	}
 
-	@Test
-	public void testAddRemove() throws RDF4JException {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddRemove(IsolationLevel level) throws RDF4JException {
+		setupTest(level);
+
 		final Statement stmt = vf.createStatement(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1),
 				vf.createIRI(URN_TEST_O1));
 		testCon.begin();
@@ -1402,8 +1551,11 @@ public abstract class RepositoryConnectionTest {
 		});
 	}
 
-	@Test
-	public void testAddDelete() throws RDF4JException {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddDelete(IsolationLevel level) throws RDF4JException {
+		setupTest(level);
+
 		final Statement stmt = vf.createStatement(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1),
 				vf.createIRI(URN_TEST_O1));
 		testCon.begin();
@@ -1421,8 +1573,11 @@ public abstract class RepositoryConnectionTest {
 		});
 	}
 
-	@Test
-	public final void testInsertRemove() throws RDF4JException {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public final void testInsertRemove(IsolationLevel level) throws RDF4JException {
+		setupTest(level);
+
 		final Statement stmt = vf.createStatement(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1),
 				vf.createIRI(URN_TEST_O1));
 		testCon.begin();
@@ -1440,8 +1595,11 @@ public abstract class RepositoryConnectionTest {
 		});
 	}
 
-	@Test
-	public void testInsertDelete() throws RDF4JException {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testInsertDelete(IsolationLevel level) throws RDF4JException {
+		setupTest(level);
+
 		final Statement stmt = vf.createStatement(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1),
 				vf.createIRI(URN_TEST_O1));
 		testCon.begin();
@@ -1460,8 +1618,11 @@ public abstract class RepositoryConnectionTest {
 		});
 	}
 
-	@Test
-	public void testAddRemoveAdd() throws RDF4JException {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddRemoveAdd(IsolationLevel level) throws RDF4JException {
+		setupTest(level);
+
 		Statement stmt = vf.createStatement(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1),
 				vf.createIRI(URN_TEST_O1));
 		testCon.add(stmt);
@@ -1469,11 +1630,14 @@ public abstract class RepositoryConnectionTest {
 		testCon.remove(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1), vf.createIRI(URN_TEST_O1));
 		testCon.add(stmt);
 		testCon.commit();
-		Assert.assertFalse(testCon.isEmpty());
+		assertFalse(testCon.isEmpty());
 	}
 
-	@Test
-	public void testAddDeleteAdd() throws RDF4JException {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddDeleteAdd(IsolationLevel level) throws RDF4JException {
+		setupTest(level);
+
 		Statement stmt = vf.createStatement(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1),
 				vf.createIRI(URN_TEST_O1));
 		testCon.add(stmt);
@@ -1482,11 +1646,14 @@ public abstract class RepositoryConnectionTest {
 				"DELETE DATA {<" + URN_TEST_S1 + "> <" + URN_TEST_P1 + "> <" + URN_TEST_O1 + ">}").execute();
 		testCon.add(stmt);
 		testCon.commit();
-		Assert.assertFalse(testCon.isEmpty());
+		assertFalse(testCon.isEmpty());
 	}
 
-	@Test
-	public void testAddRemoveInsert() throws RDF4JException {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddRemoveInsert(IsolationLevel level) throws RDF4JException {
+		setupTest(level);
+
 		Statement stmt = vf.createStatement(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1),
 				vf.createIRI(URN_TEST_O1));
 		testCon.add(stmt);
@@ -1495,11 +1662,14 @@ public abstract class RepositoryConnectionTest {
 		testCon.prepareUpdate(QueryLanguage.SPARQL,
 				"INSERT DATA {<" + URN_TEST_S1 + "> <" + URN_TEST_P1 + "> <" + URN_TEST_O1 + ">}").execute();
 		testCon.commit();
-		Assert.assertFalse(testCon.isEmpty());
+		assertFalse(testCon.isEmpty());
 	}
 
-	@Test
-	public void testAddDeleteInsert() throws RDF4JException {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testAddDeleteInsert(IsolationLevel level) throws RDF4JException {
+		setupTest(level);
+
 		testCon.add(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1), vf.createIRI(URN_TEST_O1));
 		testCon.begin();
 		testCon.prepareUpdate(QueryLanguage.SPARQL,
@@ -1507,16 +1677,19 @@ public abstract class RepositoryConnectionTest {
 		testCon.prepareUpdate(QueryLanguage.SPARQL,
 				"INSERT DATA {<" + URN_TEST_S1 + "> <" + URN_TEST_P1 + "> <" + URN_TEST_O1 + ">}").execute();
 		testCon.commit();
-		Assert.assertFalse(testCon.isEmpty());
+		assertFalse(testCon.isEmpty());
 	}
 
-	@Test
-	public void testQueryInTransaction() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testQueryInTransaction(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(bob, RDF.TYPE, FOAF.PERSON);
 
 		testCon.begin();
 		String query = "SELECT * where {?x a ?y }";
-		try (TupleQueryResult result = testCon.prepareTupleQuery(QueryLanguage.SPARQL, query).evaluate();) {
+		try (TupleQueryResult result = testCon.prepareTupleQuery(QueryLanguage.SPARQL, query).evaluate()) {
 			// test verifies that query as part of transaction executes and returns
 			// a result
 			assertNotNull(result);
@@ -1525,8 +1698,11 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testUpdateInTransaction() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testUpdateInTransaction(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(bob, RDF.TYPE, FOAF.PERSON);
 
 		testCon.begin();
@@ -1539,10 +1715,13 @@ public abstract class RepositoryConnectionTest {
 		testCon.commit();
 	}
 
-	@Test
-	public void testInferredStatementCount() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testInferredStatementCount(IsolationLevel level) {
+		setupTest(level);
+
 		assertThat(testCon.isEmpty()).isTrue();
-		int inferred = getTotalStatementCount(testCon);
+		long inferred = getTotalStatementCount(testCon);
 
 		IRI root = vf.createIRI("urn:root");
 
@@ -1553,8 +1732,11 @@ public abstract class RepositoryConnectionTest {
 		assertThat(getTotalStatementCount(testCon)).isEqualTo(inferred);
 	}
 
-	@Test
-	public void testGetContextIDs() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testGetContextIDs(IsolationLevel level) {
+		setupTest(level);
+
 		assertThat(Iterations.asList(testCon.getContextIDs())).isEmpty();
 
 		// load data
@@ -1568,8 +1750,11 @@ public abstract class RepositoryConnectionTest {
 		assertThat(Iterations.asList(testCon.getContextIDs())).isEqualTo(List.of((Resource) context2));
 	}
 
-	@Test
-	public void testXmlCalendarZ() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testXmlCalendarZ(IsolationLevel level) throws Exception {
+		setupTest(level);
+
 		String NS = "http://example.org/rdf/";
 		int OFFSET = TimeZone.getDefault()
 				.getOffset(new GregorianCalendar(2007 - 1900, Calendar.NOVEMBER, 6).getTimeInMillis()) / 1000 / 60;
@@ -1597,16 +1782,21 @@ public abstract class RepositoryConnectionTest {
 		xcal.setTimezone(OFFSET);
 		TupleQuery query = testCon.prepareTupleQuery(QueryLanguage.SPARQL, SELECT_BY_DATE);
 		query.setBinding("date", vf.createLiteral(xcal));
-		TupleQueryResult result = query.evaluate();
-		List<BindingSet> list = new ArrayList<>();
-		while (result.hasNext()) {
-			list.add(result.next());
+		List<BindingSet> list;
+		try (TupleQueryResult result = query.evaluate()) {
+			list = new ArrayList<>();
+			while (result.hasNext()) {
+				list.add(result.next());
+			}
 		}
 		assertThat(list).hasSize(7);
 	}
 
-	@Test
-	public void testOptionalFilter() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testOptionalFilter(IsolationLevel level) {
+		setupTest(level);
+
 		String optional = "{ ?s :p1 ?v1 OPTIONAL {?s :p2 ?v2 FILTER(?v1<3) } }";
 		IRI s = vf.createIRI("urn:test:s");
 		IRI p1 = vf.createIRI(URN_TEST_P1);
@@ -1619,7 +1809,7 @@ public abstract class RepositoryConnectionTest {
 		testCon.add(s, p1, v3);
 		String qry = "PREFIX :<urn:test:> SELECT ?s ?v1 ?v2 WHERE " + optional;
 		TupleQuery query = testCon.prepareTupleQuery(QueryLanguage.SPARQL, qry);
-		try (TupleQueryResult result = query.evaluate();) {
+		try (TupleQueryResult result = query.evaluate()) {
 			Set<List<Value>> set = new HashSet<>();
 			while (result.hasNext()) {
 				BindingSet bindings = result.next();
@@ -1630,8 +1820,11 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testOrPredicate() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testOrPredicate(IsolationLevel level) {
+		setupTest(level);
+
 		String union = "{ :s ?p :o FILTER (?p = :p1 || ?p = :p2) }";
 		IRI s = vf.createIRI("urn:test:s");
 		IRI p1 = vf.createIRI(URN_TEST_P1);
@@ -1641,7 +1834,7 @@ public abstract class RepositoryConnectionTest {
 		testCon.add(s, p2, o);
 		String qry = "PREFIX :<urn:test:> SELECT ?p WHERE " + union;
 		TupleQuery query = testCon.prepareTupleQuery(QueryLanguage.SPARQL, qry);
-		try (TupleQueryResult result = query.evaluate();) {
+		try (TupleQueryResult result = query.evaluate()) {
 			List<Value> list = new ArrayList<>();
 			while (result.hasNext()) {
 				BindingSet bindings = result.next();
@@ -1652,18 +1845,24 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testSES713() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testSES713(IsolationLevel level) {
+		setupTest(level);
+
 		String queryString = "SELECT * { ?sub ?pred ?obj . FILTER ( 'not a number' + 1 = ?obj )}";
 
 		TupleQuery query = testCon.prepareTupleQuery(QueryLanguage.SPARQL, queryString);
-		try (TupleQueryResult tqr = query.evaluate();) {
-			assertFalse("Query should not return any results", tqr.hasNext());
+		try (TupleQueryResult tqr = query.evaluate()) {
+			assertFalse(tqr.hasNext(), "Query should not return any results");
 		}
 	}
 
-	@Test
-	public void testSES2172ChineseChars() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testSES2172ChineseChars(IsolationLevel level) {
+		setupTest(level);
+
 		String updateString = "INSERT DATA { <urn:subject1> rdfs:label \"\\u8BBE\\u5907\". }";
 
 		Update update = testCon.prepareUpdate(QueryLanguage.SPARQL, updateString);
@@ -1674,7 +1873,7 @@ public abstract class RepositoryConnectionTest {
 		String queryString = "SELECT ?o WHERE { <urn:subject1> rdfs:label ?o . }";
 
 		TupleQuery query = testCon.prepareTupleQuery(QueryLanguage.SPARQL, queryString);
-		try (TupleQueryResult result = query.evaluate();) {
+		try (TupleQueryResult result = query.evaluate()) {
 			assertNotNull(result);
 
 			final String expected = "设备";
@@ -1686,8 +1885,11 @@ public abstract class RepositoryConnectionTest {
 		}
 	}
 
-	@Test
-	public void testQueryDefaultGraph() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testQueryDefaultGraph(IsolationLevel level) {
+		setupTest(level);
+
 		IRI graph = vf.createIRI("urn:test:default");
 		testCon.add(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1), vf.createIRI(URN_TEST_O1));
 		assertThat(size(graph)).isEqualTo(0);
@@ -1695,23 +1897,32 @@ public abstract class RepositoryConnectionTest {
 		assertThat(size(graph)).isEqualTo(1);
 	}
 
-	@Test
-	public void testQueryBaseURI() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testQueryBaseURI(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.add(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1), vf.createIRI(URN_TEST_O1));
 		try (TupleQueryResult rs = testCon.prepareTupleQuery(QueryLanguage.SPARQL, "SELECT * { <> ?p ?o }", URN_TEST_S1)
-				.evaluate();) {
+				.evaluate()) {
 			assertThat(rs.hasNext()).isTrue();
 		}
 	}
 
-	@Test
-	public void testUpdateBaseURI() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testUpdateBaseURI(IsolationLevel level) {
+		setupTest(level);
+
 		testCon.prepareUpdate(QueryLanguage.SPARQL, "INSERT DATA { <> a <> }", URN_TEST_S1).execute();
 		assertThat(testCon.size()).isEqualTo(1L);
 	}
 
-	@Test
-	public void testDeleteDefaultGraph() throws Exception {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testDeleteDefaultGraph(IsolationLevel level) {
+		setupTest(level);
+
 		IRI g1 = vf.createIRI("urn:test:g1");
 		IRI g2 = vf.createIRI("urn:test:g2");
 		testCon.add(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1), vf.createIRI(URN_TEST_O1), g1);
@@ -1726,39 +1937,72 @@ public abstract class RepositoryConnectionTest {
 		assertThat(size(g2)).isEqualTo(1);
 	}
 
-	private int size(IRI defaultGraph) throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testRemoveStatementsFromContextSingleTransaction(IsolationLevel level) throws Exception {
+		setupTest(level);
+
+		IRI g1 = vf.createIRI("urn:test:g1");
+		IRI g2 = vf.createIRI("urn:test:g2");
+		testCon.begin();
+		testCon.add(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1), vf.createIRI(URN_TEST_O1), g1);
+		testCon.add(vf.createIRI("urn:test:s2"), vf.createIRI(URN_TEST_P2), vf.createIRI("urn:test:o2"), g2);
+		testCon.commit();
+
+		testCon.begin();
+		testCon.remove(((Resource) null), null, null, g1);
+		try (Stream<Statement> stream = testCon.getStatements(null, null, null, false).stream()) {
+			List<Statement> collect = stream.collect(Collectors.toList());
+			assertEquals(1, collect.size());
+		}
+		testCon.commit();
+	}
+
+	@ParameterizedTest
+	@MethodSource("parameters")
+	public void testClearStatementsFromContextSingleTransaction(IsolationLevel level) throws Exception {
+		setupTest(level);
+
+		IRI g1 = vf.createIRI("urn:test:g1");
+		IRI g2 = vf.createIRI("urn:test:g2");
+		testCon.begin();
+		testCon.add(vf.createIRI(URN_TEST_S1), vf.createIRI(URN_TEST_P1), vf.createIRI(URN_TEST_O1), g1);
+		testCon.add(vf.createIRI("urn:test:s2"), vf.createIRI(URN_TEST_P2), vf.createIRI("urn:test:o2"), g2);
+		testCon.commit();
+
+		testCon.begin();
+		testCon.clear(g1);
+
+		try (Stream<Statement> stream = testCon.getStatements(null, null, null, false).stream()) {
+			List<Statement> collect = stream.collect(Collectors.toList());
+			assertEquals(1, collect.size());
+		}
+		testCon.commit();
+	}
+
+	private long size(IRI defaultGraph) throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 		TupleQuery qry = testCon.prepareTupleQuery(QueryLanguage.SPARQL, "SELECT * { ?s ?p ?o }");
 		SimpleDataset dataset = new SimpleDataset();
 		dataset.addDefaultGraph(defaultGraph);
 		qry.setDataset(dataset);
-		TupleQueryResult result = qry.evaluate();
-		try {
-			int count = 0;
-			while (result.hasNext()) {
-				result.next();
-				count++;
-			}
-			return count;
-		} finally {
-			result.close();
+
+		long size;
+		try (TupleQueryResult result = qry.evaluate()) {
+			size = result.stream().count();
 		}
+
+		try (Stream<Statement> stream = testCon.getStatements(null, null, null, defaultGraph).stream()) {
+			assertEquals(size, stream.count());
+		}
+
+		return size;
+
 	}
 
-	private int getTotalStatementCount(RepositoryConnection connection) throws RepositoryException {
-		CloseableIteration<? extends Statement, RepositoryException> iter = connection.getStatements(null, null, null,
-				true);
-
-		try {
-			int size = 0;
-
-			while (iter.hasNext()) {
-				iter.next();
-				++size;
-			}
-
-			return size;
-		} finally {
-			iter.close();
+	private long getTotalStatementCount(RepositoryConnection connection) throws RepositoryException {
+		try (CloseableIteration<? extends Statement> iter = connection.getStatements(null, null,
+				null, true)) {
+			return iter.stream().count();
 		}
 	}
 

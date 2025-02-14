@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.console.command;
 
@@ -58,7 +61,7 @@ import org.jline.reader.UserInterruptException;
 public class Create extends ConsoleCommand {
 	private static final String TEMPLATES_SUBDIR = "templates";
 	private static final String FILE_EXT = ".ttl";
-	private File templatesDir;
+	private final File templatesDir;
 
 	@Override
 	public String getName() {
@@ -89,7 +92,7 @@ public class Create extends ConsoleCommand {
 	}
 
 	@Override
-	public void execute(String... tokens) throws IOException {
+	public void execute(String... tokens) {
 		if (tokens.length < 2) {
 			writeln(getHelpLong());
 		} else {
@@ -161,9 +164,8 @@ public class Create extends ConsoleCommand {
 	 * Create a new repository based on a template
 	 *
 	 * @param templateName name of the template
-	 * @throws IOException
 	 */
-	private void createRepository(final String templateName) throws IOException {
+	private void createRepository(final String templateName) {
 		try {
 			// FIXME: remove assumption of .ttl extension
 			final String templateFileName = templateName + FILE_EXT;
@@ -237,10 +239,9 @@ public class Create extends ConsoleCommand {
 	 * @param variableMap
 	 * @param multilineInput
 	 * @return
-	 * @throws IOException
 	 */
 	private boolean inputParameters(final Map<String, String> valueMap, final Map<String, List<String>> variableMap,
-			Map<String, String> multilineInput) throws IOException {
+			Map<String, String> multilineInput) {
 		if (!variableMap.isEmpty()) {
 			writeln("Please specify values for the following variables:");
 		}
@@ -275,7 +276,7 @@ public class Create extends ConsoleCommand {
 			}
 
 			value = value.trim();
-			if (value.length() == 0) {
+			if (value.isEmpty()) {
 				value = null; // NOPMD
 			}
 			valueMap.put(var, value);

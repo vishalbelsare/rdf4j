@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.spring.resultcache;
@@ -24,13 +27,13 @@ import org.eclipse.rdf4j.query.GraphQueryResult;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 
 /**
- * @since 4.0.0
  * @author Florian Kleedorfer
+ * @since 4.0.0
  */
 public class CachedGraphQueryResult implements GraphQueryResult {
-	private List<Statement> statements;
+	private final List<Statement> statements;
 	private Iterator<Statement> replayingIterator;
-	private Map<String, String> namespaces;
+	private final Map<String, String> namespaces;
 
 	CachedGraphQueryResult(List<Statement> statements, Map<String, String> namespaces) {
 		this.statements = new ArrayList<>(statements);

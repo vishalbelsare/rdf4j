@@ -1,23 +1,29 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.lucene.impl;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
+import java.util.function.Function;
 
+import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
@@ -32,20 +38,32 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.TotalHitCountCollector;
 import org.apache.lucene.store.RAMDirectory;
+import org.eclipse.rdf4j.common.concurrent.locks.Properties;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.base.CoreDatatype;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.impl.TreeModel;
+import org.eclipse.rdf4j.model.vocabulary.GEO;
+import org.eclipse.rdf4j.model.vocabulary.GEOF;
+import org.eclipse.rdf4j.query.BindingSet;
+import org.eclipse.rdf4j.query.TupleQuery;
+import org.eclipse.rdf4j.query.TupleQueryResult;
 import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.repository.sail.SailRepositoryConnection;
+import org.eclipse.rdf4j.repository.util.Repositories;
+import org.eclipse.rdf4j.sail.evaluation.TupleFunctionEvaluationMode;
 import org.eclipse.rdf4j.sail.lucene.LuceneSail;
 import org.eclipse.rdf4j.sail.lucene.SearchFields;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class LuceneIndexTest {
 
@@ -103,16 +121,17 @@ public class LuceneIndexTest {
 
 	LuceneIndex index;
 
-	@Before
+	@BeforeEach
 	public void setUp() throws Exception {
 		directory = new RAMDirectory();
 		analyzer = new StandardAnalyzer();
 		index = new LuceneIndex(directory, analyzer);
 	}
 
-	@After
+	@AfterEach
 	public void tearDown() throws Exception {
 		index.shutDown();
+		Properties.setLockTrackingEnabled(false);
 	}
 
 	@Test
@@ -396,10 +415,23 @@ public class LuceneIndexTest {
 		Literal literal2 = vf.createLiteral("hi there, too", STRING);
 		Literal literal3 = vf.createLiteral("1.0");
 		Literal literal4 = vf.createLiteral("1.0", FLOAT);
-		assertEquals("Is the first literal accepted?", true, index.accept(literal1));
-		assertEquals("Is the second literal accepted?", true, index.accept(literal2));
-		assertEquals("Is the third literal accepted?", true, index.accept(literal3));
-		assertEquals("Is the fourth literal accepted?", false, index.accept(literal4));
+		assertEquals(true, index.accept(literal1), "Is the first literal accepted?");
+		assertEquals(true, index.accept(literal2), "Is the second literal accepted?");
+		assertEquals(true, index.accept(literal3), "Is the third literal accepted?");
+		assertEquals(false, index.accept(literal4), "Is the fourth literal accepted?");
+	}
+
+	@Test
+	public void testInstantiatesCustomQueryAnalyzer() throws Exception {
+		LuceneIndex index = new LuceneIndex();
+		java.util.Properties props = new java.util.Properties();
+		props.put(LuceneSail.QUERY_ANALYZER_CLASS_KEY, EnglishAnalyzer.class.getName());
+		props.put(LuceneSail.ANALYZER_CLASS_KEY, EnglishAnalyzer.class.getName());
+		props.put(LuceneSail.LUCENE_RAMDIR_KEY, "true");
+		index.initialize(props);
+
+		assertTrue(index.getAnalyzer() instanceof EnglishAnalyzer);
+		assertTrue(index.getQueryAnalyzer() instanceof EnglishAnalyzer);
 	}
 
 	private void assertStatement(Statement statement) throws Exception {
@@ -424,7 +456,7 @@ public class LuceneIndexTest {
 	 */
 	private void assertStatement(Statement statement, Document document) {
 		IndexableField[] fields = document.getFields(SearchFields.getPropertyField(statement.getPredicate()));
-		assertNotNull("field " + statement.getPredicate() + " not found in document " + document, fields);
+		assertNotNull(fields, "field " + statement.getPredicate() + " not found in document " + document);
 		for (IndexableField f : fields) {
 			if (((Literal) statement.getObject()).getLabel().equals(f.stringValue())) {
 				return;
@@ -459,4 +491,85 @@ public class LuceneIndexTest {
 	 * for(String notFound : toFind) { assertEquals("Was the expected text value '" + notFound + "' found?", true,
 	 * false); } }
 	 */
+
+	@Test
+	public void geoSparqlQueryTest() {
+		final String prefix = "http://www.example.org/#";
+		final String prefixes = "PREFIX ex: <" + prefix + ">\n"
+				+ "PREFIX geof: <" + GEOF.NAMESPACE + ">\n"
+				+ "PREFIX geo: <" + CoreDatatype.GEO.NAMESPACE + ">\n"
+				+ "PREFIX uom: <http://www.opengis.net/def/uom/OGC/1.0/>\n";
+		Model data = new TreeModel();
+
+		IRI cp = vf.createIRI(prefix + "cp");
+		IRI bm = vf.createIRI(prefix + "bm");
+		IRI nkv = vf.createIRI(prefix + "nkv");
+
+		data.add(cp, GEO.AS_WKT, vf.createLiteral("Point(4.38436 45.44917)", CoreDatatype.GEO.WKT_LITERAL));
+		data.add(bm, GEO.AS_WKT, vf.createLiteral("Point(4.38311 45.45423)", CoreDatatype.GEO.WKT_LITERAL));
+		data.add(nkv, GEO.AS_WKT, vf.createLiteral("Point(4.87306 45.77903)", CoreDatatype.GEO.WKT_LITERAL));
+		data.add(vf.createIRI(prefix + "arp"), GEO.AS_WKT,
+				vf.createLiteral("Point(2.89271 42.69848)", CoreDatatype.GEO.WKT_LITERAL));
+
+		String polyVill = "POLYGON((4.864712 45.784405, 4.883165 45.787756, 4.889946 45.785781, 4.904881 45.767403, 4.900761 45.765487, 4.872093 45.770995, 4.86454 45.770457, 4.858789 45.770277, 4.859905 45.784644, 4.864712 45.784405))";
+		String polySain = "POLYGON((4.380627 45.463983, 4.400539 45.462177, 4.428349 45.436286, 4.399509 45.411346, 4.374447 45.426528, 4.370499 45.450618, 4.380627 45.463983))";
+
+		SailRepository m1 = new SailRepository(new MemoryStore());
+		LuceneSail lc = new LuceneSail();
+		lc.setBaseSail(new MemoryStore());
+		lc.setParameter(LuceneSail.WKT_FIELDS, GEO.AS_WKT.toString());
+		lc.setLuceneIndex(index);
+		lc.setEvaluationMode(TupleFunctionEvaluationMode.NATIVE);
+		SailRepository m2 = new SailRepository(lc);
+
+		// add test data
+		Repositories.consume(m1, conn -> conn.add(data));
+		Repositories.consume(m2, conn -> conn.add(data));
+
+		lc.reindex();
+
+		Function<TupleQueryResult, Set<Value>> toval = (res) -> {
+			Set<Value> list = new HashSet<>();
+			while (res.hasNext()) {
+				BindingSet next = res.next();
+				list.add(next.getValue("v"));
+			}
+			return list;
+		};
+
+		// test queries
+
+		String q0 = prefixes
+				+ "SELECT * {\n"
+				+ "  ?v geo:asWKT ?loc .\n"
+				+ "  FILTER(geof:distance(\"Point(4.386914 45.440637)\"^^geo:wktLiteral, ?loc, uom:metre) < 10000) \n"
+				+ "}\n";
+		Set<Value> q0ex = Set.of(bm, cp);
+
+		String q1 = prefixes
+				+ "SELECT * {\n"
+				+ "  ?v geo:asWKT ?loc .\n"
+				+ "  FILTER(geof:ehContains(\"" + polySain + "\"^^geo:wktLiteral, ?loc)) \n"
+				+ "}\n";
+		Set<Value> q1ex = Set.of(bm, cp);
+
+		String q2 = prefixes
+				+ "SELECT * {\n"
+				+ "  ?v geo:asWKT ?loc .\n"
+				+ "  FILTER(geof:ehContains(\"" + polyVill + "\"^^geo:wktLiteral, ?loc)) \n"
+				+ "}\n";
+		Set<Value> q2ex = Set.of(nkv);
+
+		Set<Value> nlcq0 = Repositories.tupleQuery(m1, q0, toval);
+		Set<Value> nlcq1 = Repositories.tupleQuery(m1, q1, toval);
+		Set<Value> nlcq2 = Repositories.tupleQuery(m1, q2, toval);
+
+		assertEquals(q0ex, nlcq0);
+		assertEquals(q1ex, nlcq1);
+		assertEquals(q2ex, nlcq2);
+
+		assertEquals(nlcq0, Repositories.tupleQuery(m2, q0, toval));
+		assertEquals(nlcq1, Repositories.tupleQuery(m2, q1, toval));
+		assertEquals(nlcq2, Repositories.tupleQuery(m2, q2, toval));
+	}
 }

@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl.ast.planNodes;
@@ -12,7 +15,7 @@ import java.util.Objects;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
-import org.eclipse.rdf4j.sail.SailException;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 
 public class TrimToTarget implements PlanNode {
 
@@ -23,30 +26,36 @@ public class TrimToTarget implements PlanNode {
 
 	boolean keepPath = false;
 
-	public TrimToTarget(PlanNode parent) {
-		parent = PlanNodeHelper.handleSorting(this, parent);
-		this.parent = parent;
+	public TrimToTarget(PlanNode parent, ConnectionsGroup connectionsGroup) {
+		this.parent = PlanNodeHelper.handleSorting(this, parent, connectionsGroup);
 //		this.stackTrace = Thread.currentThread().getStackTrace();
 	}
 
 	@Override
-	public CloseableIteration<? extends ValidationTuple, SailException> iterator() {
+	public CloseableIteration<? extends ValidationTuple> iterator() {
 		return new LoggingCloseableIteration(this, validationExecutionLogger) {
 
-			final CloseableIteration<? extends ValidationTuple, SailException> parentIterator = parent.iterator();
+			private CloseableIteration<? extends ValidationTuple> parentIterator;
 
 			@Override
-			public void localClose() throws SailException {
-				parentIterator.close();
+			protected void init() {
+				parentIterator = parent.iterator();
 			}
 
 			@Override
-			protected boolean localHasNext() throws SailException {
+			public void localClose() {
+				if (parentIterator != null) {
+					parentIterator.close();
+				}
+			}
+
+			@Override
+			protected boolean localHasNext() {
 				return parentIterator.hasNext();
 			}
 
 			@Override
-			protected ValidationTuple loggingNext() throws SailException {
+			protected ValidationTuple loggingNext() {
 
 				return parentIterator.next().trimToTarget();
 
@@ -115,8 +124,7 @@ public class TrimToTarget implements PlanNode {
 	@Override
 	public String toString() {
 		return "TrimToTarget{" +
-				"parent=" + parent +
-				", keepPath=" + keepPath +
+				"keepPath=" + keepPath +
 				'}';
 	}
 }

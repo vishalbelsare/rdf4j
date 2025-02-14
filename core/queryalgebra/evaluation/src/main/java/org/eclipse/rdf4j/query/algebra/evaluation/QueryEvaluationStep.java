@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra.evaluation;
 
@@ -11,7 +14,7 @@ import java.util.function.Function;
 
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.common.iteration.DelayedIteration;
-import org.eclipse.rdf4j.common.iteration.Iteration;
+import org.eclipse.rdf4j.common.iteration.EmptyIteration;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.algebra.TupleExpr;
@@ -22,12 +25,15 @@ import org.eclipse.rdf4j.query.algebra.TupleExpr;
  */
 @FunctionalInterface
 public interface QueryEvaluationStep {
+
+	EmptyIteration<BindingSet> EMPTY_ITERATION = new EmptyIteration<>();
+	QueryEvaluationStep EMPTY = bindings -> EMPTY_ITERATION;
+
 	/**
 	 * Utility class that removes code duplication and makes a precompiled QueryEvaluationStep available as an iteration
 	 * that may be created and used later.
 	 */
-	class DelayedEvaluationIteration
-			extends DelayedIteration<BindingSet, QueryEvaluationException> {
+	class DelayedEvaluationIteration extends DelayedIteration<BindingSet> {
 		private final QueryEvaluationStep arg;
 		private final BindingSet bs;
 
@@ -37,13 +43,13 @@ public interface QueryEvaluationStep {
 		}
 
 		@Override
-		protected Iteration<? extends BindingSet, ? extends QueryEvaluationException> createIteration()
+		protected CloseableIteration<? extends BindingSet> createIteration()
 				throws QueryEvaluationException {
 			return arg.evaluate(bs);
 		}
 	}
 
-	CloseableIteration<BindingSet, QueryEvaluationException> evaluate(BindingSet bindings);
+	CloseableIteration<BindingSet> evaluate(BindingSet bindings);
 
 	/**
 	 * A fall back implementation that wraps a pre-existing evaluate method on a strategy
@@ -53,12 +59,11 @@ public interface QueryEvaluationStep {
 	 * @return a thin wrapper arround the evaluation call.
 	 */
 	static QueryEvaluationStep minimal(EvaluationStrategy strategy, TupleExpr expr) {
-		return new QueryEvaluationStep() {
-			@Override
-			public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(BindingSet bs) {
-				return strategy.evaluate(expr, bs);
-			}
-		};
+		return bs -> strategy.evaluate(expr, bs);
+	}
+
+	static QueryEvaluationStep empty() {
+		return EMPTY;
 	}
 
 	/**
@@ -70,12 +75,7 @@ public interface QueryEvaluationStep {
 	 * @return a new evaluation step that executes wrap on the inner qes.
 	 */
 	static QueryEvaluationStep wrap(QueryEvaluationStep qes,
-			Function<CloseableIteration<BindingSet, QueryEvaluationException>, CloseableIteration<BindingSet, QueryEvaluationException>> wrap) {
-		return new QueryEvaluationStep() {
-			@Override
-			public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(BindingSet bs) {
-				return wrap.apply(qes.evaluate(bs));
-			}
-		};
+			Function<CloseableIteration<BindingSet>, CloseableIteration<BindingSet>> wrap) {
+		return bs -> wrap.apply(qes.evaluate(bs));
 	}
 }

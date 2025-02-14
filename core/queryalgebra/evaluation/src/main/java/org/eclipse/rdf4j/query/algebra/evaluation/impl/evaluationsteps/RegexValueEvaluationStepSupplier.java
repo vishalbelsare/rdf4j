@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra.evaluation.impl.evaluationsteps;
 
@@ -24,16 +27,20 @@ import org.eclipse.rdf4j.query.algebra.evaluation.impl.QueryEvaluationContext;
 import org.eclipse.rdf4j.query.algebra.evaluation.util.QueryEvaluationUtility;
 import org.eclipse.rdf4j.query.impl.EmptyBindingSet;
 
+//TODO: at 5.0 move to subpackage values
 public class RegexValueEvaluationStepSupplier {
 	/**
 	 * Returns value evaluation steps that determines whether the two operands match according to the <code>regex</code>
 	 * operator.
-	 *
+	 * <p>
 	 * If possible it will cache the Pattern and flags, and if everything is constant it will return a constant value.
 	 */
 	private static final class ChangingRegexQueryValueEvaluationStep implements QueryValueEvaluationStep {
 		private final Regex node;
 		private final EvaluationStrategy strategy;
+		private Value parg;
+		private Value farg;
+		private Pattern pattern;
 
 		private ChangingRegexQueryValueEvaluationStep(Regex node, EvaluationStrategy strategy) {
 			this.node = node;
@@ -41,8 +48,7 @@ public class RegexValueEvaluationStepSupplier {
 		}
 
 		@Override
-		public Value evaluate(BindingSet bindings)
-				throws ValueExprEvaluationException, QueryEvaluationException {
+		public Value evaluate(BindingSet bindings) throws QueryEvaluationException {
 			Value arg = strategy.evaluate(node.getArg(), bindings);
 			Value parg = strategy.evaluate(node.getPatternArg(), bindings);
 			Value farg = null;
@@ -53,15 +59,32 @@ public class RegexValueEvaluationStepSupplier {
 
 			if (QueryEvaluationUtility.isStringLiteral(arg) && QueryEvaluationUtility.isSimpleLiteral(parg)
 					&& (farg == null || QueryEvaluationUtility.isSimpleLiteral(farg))) {
+
+				Pattern pattern = getPattern((Literal) parg, farg);
+
 				String text = ((Literal) arg).getLabel();
-				String ptn = ((Literal) parg).getLabel();
-				// TODO should this Pattern be cached?
-				int f = extractRegexFlags(farg);
-				Pattern pattern = Pattern.compile(ptn, f);
 				boolean result = pattern.matcher(text).find();
 				return BooleanLiteral.valueOf(result);
 			}
 			throw new ValueExprEvaluationException();
+		}
+
+		private Pattern getPattern(Literal parg, Value farg) {
+			if (this.parg == parg && this.farg == farg) {
+				return pattern;
+			}
+
+			String ptn = parg.getLabel();
+			int f = extractRegexFlags(farg);
+			Pattern pattern = Pattern.compile(ptn, f);
+
+			// cache the pattern object and the current parg and farg so that we can reuse it if the parg and farg are
+			// reused or somehow constant
+			this.parg = parg;
+			this.farg = farg;
+			this.pattern = pattern;
+
+			return pattern;
 		}
 	}
 
@@ -97,20 +120,14 @@ public class RegexValueEvaluationStepSupplier {
 			int f = extractRegexFlags(farg);
 			Pattern pattern = Pattern.compile(ptn, f);
 
-			return new QueryValueEvaluationStep() {
-
-				@Override
-				public Value evaluate(BindingSet bindings)
-						throws ValueExprEvaluationException, QueryEvaluationException {
-					Value arg = argStep.evaluate(bindings);
-					if (QueryEvaluationUtility.isStringLiteral(arg)) {
-						String text = ((Literal) arg).getLabel();
-						boolean result = pattern.matcher(text).find();
-						BooleanLiteral valueOf = BooleanLiteral.valueOf(result);
-						return valueOf;
-					}
-					throw new ValueExprEvaluationException();
+			return bindings -> {
+				Value arg = argStep.evaluate(bindings);
+				if (QueryEvaluationUtility.isStringLiteral(arg)) {
+					String text = ((Literal) arg).getLabel();
+					boolean result = pattern.matcher(text).find();
+					return BooleanLiteral.valueOf(result);
 				}
+				throw new ValueExprEvaluationException();
 			};
 		}
 		throw new ValueExprEvaluationException();

@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.testsuite.repository.optimistic;
 
@@ -26,6 +29,7 @@ import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.testsuite.repository.OptimisticIsolationTest;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -33,8 +37,13 @@ import org.junit.Test;
 public class MonotonicTest {
 
 	@BeforeClass
-	public static void setUpClass() throws Exception {
+	public static void setUpClass() {
 		System.setProperty("org.eclipse.rdf4j.repository.debug", "true");
+	}
+
+	@AfterClass
+	public static void afterClass() {
+		System.setProperty("org.eclipse.rdf4j.repository.debug", "false");
 	}
 
 	private Repository repo;
@@ -43,9 +52,9 @@ public class MonotonicTest {
 
 	private RepositoryConnection b;
 
-	private IsolationLevel level = IsolationLevels.SNAPSHOT_READ;
+	private final IsolationLevel level = IsolationLevels.SNAPSHOT_READ;
 
-	private String NS = "http://rdf.example.org/";
+	private final String NS = "http://rdf.example.org/";
 
 	private ValueFactory lf;
 
@@ -104,7 +113,7 @@ public class MonotonicTest {
 	}
 
 	@After
-	public void tearDown() throws Exception {
+	public void tearDown() {
 		try {
 			a.close();
 		} finally {
@@ -117,7 +126,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_independentPattern() throws Exception {
+	public void test_independentPattern() {
 		a.begin(level);
 		b.begin(level);
 		a.add(PICASSO, RDF.TYPE, PAINTER);
@@ -131,7 +140,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_safePattern() throws Exception {
+	public void test_safePattern() {
 		a.begin(level);
 		b.begin(level);
 		a.add(PICASSO, RDF.TYPE, PAINTER);
@@ -142,7 +151,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_afterPattern() throws Exception {
+	public void test_afterPattern() {
 		a.begin(level);
 		b.begin(level);
 		a.add(PICASSO, RDF.TYPE, PAINTER);
@@ -154,7 +163,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_afterInsertDataPattern() throws Exception {
+	public void test_afterInsertDataPattern() {
 		a.begin(level);
 		b.begin(level);
 		a.prepareUpdate(QueryLanguage.SPARQL, "INSERT DATA { <picasso> a <Painter> }", NS).execute();
@@ -166,7 +175,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_changedPattern() throws Exception {
+	public void test_changedPattern() {
 		a.begin(level);
 		b.begin(level);
 		a.add(PICASSO, RDF.TYPE, PAINTER);
@@ -178,7 +187,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_safeQuery() throws Exception {
+	public void test_safeQuery() {
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
 		b.add(REMBRANDT, PAINTS, ARTEMISIA);
@@ -199,7 +208,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_safeInsert() throws Exception {
+	public void test_safeInsert() {
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
 		b.add(REMBRANDT, PAINTS, ARTEMISIA);
@@ -218,7 +227,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_mergeQuery() throws Exception {
+	public void test_mergeQuery() {
 		a.add(PICASSO, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
@@ -240,7 +249,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_mergeInsert() throws Exception {
+	public void test_mergeInsert() {
 		a.add(PICASSO, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
@@ -260,7 +269,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_changedQuery() throws Exception {
+	public void test_changedQuery() {
 		a.add(PICASSO, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
@@ -282,7 +291,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_changedInsert() throws Exception {
+	public void test_changedInsert() {
 		a.add(PICASSO, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
@@ -302,7 +311,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_safeOptionalQuery() throws Exception {
+	public void test_safeOptionalQuery() {
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
 		b.add(REMBRANDT, PAINTS, ARTEMISIA);
@@ -326,7 +335,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_safeOptionalInsert() throws Exception {
+	public void test_safeOptionalInsert() {
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
 		b.add(REMBRANDT, PAINTS, ARTEMISIA);
@@ -345,7 +354,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_mergeOptionalQuery() throws Exception {
+	public void test_mergeOptionalQuery() {
 		a.add(PICASSO, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
@@ -370,7 +379,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_mergeOptionalInsert() throws Exception {
+	public void test_mergeOptionalInsert() {
 		a.add(PICASSO, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
@@ -390,7 +399,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_changedOptionalQuery() throws Exception {
+	public void test_changedOptionalQuery() {
 		a.add(PICASSO, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
@@ -415,7 +424,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_changedOptionalInsert() throws Exception {
+	public void test_changedOptionalInsert() {
 		a.add(PICASSO, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
@@ -435,7 +444,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_safeFilterQuery() throws Exception {
+	public void test_safeFilterQuery() {
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
 		b.add(REMBRANDT, PAINTS, ARTEMISIA);
@@ -457,7 +466,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_safeFilterInsert() throws Exception {
+	public void test_safeFilterInsert() {
 		b.add(REMBRANDT, RDF.TYPE, PAINTER);
 		b.add(REMBRANDT, PAINTS, NIGHTWATCH);
 		b.add(REMBRANDT, PAINTS, ARTEMISIA);
@@ -477,7 +486,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_mergeOptionalFilterQuery() throws Exception {
+	public void test_mergeOptionalFilterQuery() {
 		a.add(PICASSO, RDF.TYPE, PAINTER);
 		a.add(PICASSO, PAINTS, GUERNICA);
 		a.add(PICASSO, PAINTS, JACQUELINE);
@@ -504,7 +513,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_mergeOptionalFilterInsert() throws Exception {
+	public void test_mergeOptionalFilterInsert() {
 		a.add(PICASSO, RDF.TYPE, PAINTER);
 		a.add(PICASSO, PAINTS, GUERNICA);
 		a.add(PICASSO, PAINTS, JACQUELINE);
@@ -527,7 +536,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_changedOptionalFilterQuery() throws Exception {
+	public void test_changedOptionalFilterQuery() {
 		a.add(PICASSO, RDF.TYPE, PAINTER);
 		a.add(PICASSO, PAINTS, GUERNICA);
 		a.add(PICASSO, PAINTS, JACQUELINE);
@@ -553,7 +562,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_changedOptionalFilterInsert() throws Exception {
+	public void test_changedOptionalFilterInsert() {
 		a.add(PICASSO, RDF.TYPE, PAINTER);
 		a.add(PICASSO, PAINTS, GUERNICA);
 		a.add(PICASSO, PAINTS, JACQUELINE);
@@ -576,7 +585,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_safeRangeQuery() throws Exception {
+	public void test_safeRangeQuery() {
 		a.add(REMBRANDT, RDF.TYPE, PAINTER);
 		a.add(REMBRANDT, PAINTS, ARTEMISIA);
 		a.add(REMBRANDT, PAINTS, DANAE);
@@ -604,7 +613,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_safeRangeInsert() throws Exception {
+	public void test_safeRangeInsert() {
 		a.add(REMBRANDT, RDF.TYPE, PAINTER);
 		a.add(REMBRANDT, PAINTS, ARTEMISIA);
 		a.add(REMBRANDT, PAINTS, DANAE);
@@ -631,7 +640,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_mergeRangeQuery() throws Exception {
+	public void test_mergeRangeQuery() {
 		a.add(REMBRANDT, RDF.TYPE, PAINTER);
 		a.add(REMBRANDT, PAINTS, NIGHTWATCH);
 		a.add(REMBRANDT, PAINTS, ARTEMISIA);
@@ -660,7 +669,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_mergeRangeInsert() throws Exception {
+	public void test_mergeRangeInsert() {
 		a.add(REMBRANDT, RDF.TYPE, PAINTER);
 		a.add(REMBRANDT, PAINTS, NIGHTWATCH);
 		a.add(REMBRANDT, PAINTS, ARTEMISIA);
@@ -688,7 +697,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_changedRangeQuery() throws Exception {
+	public void test_changedRangeQuery() {
 		a.add(REMBRANDT, RDF.TYPE, PAINTER);
 		a.add(REMBRANDT, PAINTS, NIGHTWATCH);
 		a.add(REMBRANDT, PAINTS, ARTEMISIA);
@@ -717,7 +726,7 @@ public class MonotonicTest {
 	}
 
 	@Test
-	public void test_changedRangeInsert() throws Exception {
+	public void test_changedRangeInsert() {
 		a.add(REMBRANDT, RDF.TYPE, PAINTER);
 		a.add(REMBRANDT, PAINTS, NIGHTWATCH);
 		a.add(REMBRANDT, PAINTS, ARTEMISIA);
@@ -744,12 +753,11 @@ public class MonotonicTest {
 		assertEquals(16, size(a, null, null, null, false));
 	}
 
-	private int size(RepositoryConnection con, Resource subj, IRI pred, Value obj, boolean inf, Resource... ctx)
-			throws Exception {
+	private int size(RepositoryConnection con, Resource subj, IRI pred, Value obj, boolean inf, Resource... ctx) {
 		return QueryResults.asList(con.getStatements(subj, pred, obj, inf, ctx)).size();
 	}
 
-	private List<Value> eval(String var, RepositoryConnection con, String qry) throws Exception {
+	private List<Value> eval(String var, RepositoryConnection con, String qry) {
 		try (TupleQueryResult result = con.prepareTupleQuery(QueryLanguage.SPARQL, qry, NS).evaluate()) {
 			List<Value> list = new ArrayList<>();
 			while (result.hasNext()) {

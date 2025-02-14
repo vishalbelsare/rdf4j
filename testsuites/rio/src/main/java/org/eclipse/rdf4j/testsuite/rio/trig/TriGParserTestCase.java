@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.testsuite.rio.trig;
 
@@ -46,13 +49,13 @@ public abstract class TriGParserTestCase {
 	/**
 	 * Base directory for W3C TriG tests
 	 */
-	private static String TEST_W3C_FILE_BASE_PATH = "/testcases/trig/";
+	private static final String TEST_W3C_FILE_BASE_PATH = "/testcases/trig/";
 
-	private static String TEST_W3C_MANIFEST_URL = TEST_W3C_FILE_BASE_PATH + "manifest.ttl";
+	private static final String TEST_W3C_MANIFEST_URL = TEST_W3C_FILE_BASE_PATH + "manifest.ttl";
 
-	private static String TEST_W3C_MANIFEST_URI_BASE = "http://www.w3.org/2013/TriGTests/manifest.ttl#";
+	private static final String TEST_W3C_MANIFEST_URI_BASE = "http://www.w3.org/2013/TriGTests/manifest.ttl#";
 
-	private static String TEST_W3C_TEST_URI_BASE = "http://www.w3.org/2013/TriGTests/";
+	private static final String TEST_W3C_TEST_URI_BASE = "http://www.w3.org/2013/TriGTests/";
 
 	private static final Logger logger = LoggerFactory.getLogger(TriGParserTestCase.class);
 
@@ -85,7 +88,7 @@ public abstract class TriGParserTestCase {
 	}
 
 	private void parsePositiveTriGSyntaxTests(TestSuite suite, String fileBasePath, String testBaseUrl,
-			String testLocationBaseUri, RepositoryConnection con) throws Exception {
+			String testLocationBaseUri, RepositoryConnection con) {
 		StringBuilder positiveQuery = new StringBuilder();
 		positiveQuery.append(" PREFIX mf:   <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#>\n");
 		positiveQuery.append(" PREFIX qt:   <http://www.w3.org/2001/sw/DataAccess/tests/test-query#>\n");
@@ -118,7 +121,7 @@ public abstract class TriGParserTestCase {
 	}
 
 	private void parseNegativeTriGSyntaxTests(TestSuite suite, String fileBasePath, String testBaseUrl,
-			String manifestBaseUrl, RepositoryConnection con) throws Exception {
+			String manifestBaseUrl, RepositoryConnection con) {
 		StringBuilder negativeQuery = new StringBuilder();
 		negativeQuery.append(" PREFIX mf:   <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#>\n");
 		negativeQuery.append(" PREFIX qt:   <http://www.w3.org/2001/sw/DataAccess/tests/test-query#>\n");
@@ -151,7 +154,7 @@ public abstract class TriGParserTestCase {
 	}
 
 	private void parsePositiveTriGEvalTests(TestSuite suite, String fileBasePath, String testBaseUrl,
-			String manifestBaseUrl, RepositoryConnection con) throws Exception {
+			String manifestBaseUrl, RepositoryConnection con) {
 		StringBuilder positiveEvalQuery = new StringBuilder();
 		positiveEvalQuery.append(" PREFIX mf:   <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#>\n");
 		positiveEvalQuery.append(" PREFIX qt:   <http://www.w3.org/2001/sw/DataAccess/tests/test-query#>\n");
@@ -180,7 +183,7 @@ public abstract class TriGParserTestCase {
 			String nextBaseUrl = testBaseUrl + nextTestFile;
 
 			if (nextTestName.contains("CARRIAGE_RETURN")) {
-				// FIXME: Sesame seems not to preserve the CARRIAGE_RETURN character
+				// FIXME: RDF4J seems not to preserve the CARRIAGE_RETURN character
 				// right now
 				logger.warn("Ignoring TriG Positive Parser Eval Test: " + nextInputURL);
 				continue;
@@ -199,7 +202,7 @@ public abstract class TriGParserTestCase {
 	}
 
 	private void parseNegativeTriGEvalTests(TestSuite suite, String fileBasePath, String testBaseUrl,
-			String manifestBaseUrl, RepositoryConnection con) throws Exception {
+			String manifestBaseUrl, RepositoryConnection con) {
 		StringBuilder negativeEvalQuery = new StringBuilder();
 		negativeEvalQuery.append(" PREFIX mf:   <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#>\n");
 		negativeEvalQuery.append(" PREFIX qt:   <http://www.w3.org/2001/sw/DataAccess/tests/test-query#>\n");

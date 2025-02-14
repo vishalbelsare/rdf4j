@@ -1,16 +1,22 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra;
 
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
+
 import org.eclipse.rdf4j.common.annotation.Experimental;
-import org.eclipse.rdf4j.common.iteration.Iteration;
-import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.QueryEvaluationException;
+import org.eclipse.rdf4j.common.iteration.CloseableIteration;
+import org.eclipse.rdf4j.common.order.AvailableStatementOrder;
 
 /**
  * An abstract superclass for binary tuple operators which, by definition, has two arguments.
@@ -110,8 +116,6 @@ public abstract class BinaryTupleOperator extends AbstractQueryModelNode impleme
 			setLeftArg((TupleExpr) replacement);
 		} else if (rightArg == current) {
 			setRightArg((TupleExpr) replacement);
-		} else {
-			super.replaceChildNode(current, replacement);
 		}
 	}
 
@@ -133,13 +137,20 @@ public abstract class BinaryTupleOperator extends AbstractQueryModelNode impleme
 	@Override
 	public BinaryTupleOperator clone() {
 		BinaryTupleOperator clone = (BinaryTupleOperator) super.clone();
-		clone.setLeftArg(getLeftArg().clone());
-		clone.setRightArg(getRightArg().clone());
+
+		TupleExpr leftArgClone = getLeftArg().clone();
+		leftArgClone.setParentNode(clone);
+		clone.leftArg = leftArgClone;
+
+		TupleExpr rightArgClone = getRightArg().clone();
+		rightArgClone.setParentNode(clone);
+		clone.rightArg = rightArgClone;
+
 		return clone;
 	}
 
 	@Experimental
-	public void setAlgorithm(Iteration<BindingSet, QueryEvaluationException> iteration) {
+	public void setAlgorithm(CloseableIteration<?> iteration) {
 		this.algorithmName = iteration.getClass().getSimpleName();
 	}
 
@@ -151,5 +162,33 @@ public abstract class BinaryTupleOperator extends AbstractQueryModelNode impleme
 	@Experimental
 	public String getAlgorithmName() {
 		return algorithmName;
+	}
+
+	@Override
+	public Set<Var> getSupportedOrders(AvailableStatementOrder tripleSource) {
+		Set<Var> leftArgSupportedOrders = leftArg.getSupportedOrders(tripleSource);
+		Set<Var> rightArgSupportedOrders = rightArg.getSupportedOrders(tripleSource);
+		if (leftArgSupportedOrders.equals(rightArgSupportedOrders)) {
+			return leftArgSupportedOrders;
+		} else {
+			HashSet<Var> intersection = new HashSet<>(leftArgSupportedOrders);
+			intersection.retainAll(rightArgSupportedOrders);
+			return intersection;
+		}
+
+	}
+
+	@Override
+	public void setOrder(Var var) {
+		leftArg.setOrder(var);
+		rightArg.setOrder(var);
+	}
+
+	@Override
+	public Var getOrder() {
+		Var leftArgOrder = leftArg.getOrder();
+		Var rightArgOrder = rightArg.getOrder();
+		assert Objects.equals(leftArgOrder, rightArgOrder);
+		return leftArgOrder;
 	}
 }

@@ -1,17 +1,16 @@
 /*******************************************************************************
  * Copyright (c) 2018 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl;
 
-import static junit.framework.TestCase.assertTrue;
-
-import java.io.IOException;
-import java.io.StringReader;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -23,9 +22,8 @@ import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.vocabulary.DASH;
 import org.eclipse.rdf4j.model.vocabulary.RSX;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
-import org.eclipse.rdf4j.rio.RDFFormat;
-import org.eclipse.rdf4j.rio.Rio;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -40,13 +38,14 @@ public class ShaclSailSupportedPredicatesDocumentationIT extends AbstractShaclTe
 	@AfterAll
 	public static void afterClass() {
 
-		assertTrue("No test uses the following predicate that the ShaclSail announces as supported: "
-				+ Arrays.toString(STATIC_SHACL_PREDICATES.toArray()), STATIC_SHACL_PREDICATES.isEmpty());
+		Assertions.assertTrue(STATIC_SHACL_PREDICATES.isEmpty(),
+				"No test uses the following predicate that the ShaclSail announces as supported: "
+						+ Arrays.toString(STATIC_SHACL_PREDICATES.toArray()));
 	}
 
 	@ParameterizedTest
 	@MethodSource("testCases")
-	public void testShaclSailSupportedPredicatesDocumentation(TestCase testCase) throws IOException {
+	public void testShaclSailSupportedPredicatesDocumentation(TestCase testCase) {
 
 		HashSet<IRI> shaclPredicates = new HashSet<>(ShaclSail.getSupportedShaclPredicates());
 
@@ -60,17 +59,11 @@ public class ShaclSailSupportedPredicatesDocumentationIT extends AbstractShaclTe
 				.collect(Collectors.toSet());
 
 		for (IRI predicate : predicatesInUseInTest) {
-			assertTrue("Predicate used in test but not listed in ShaclSail: " + predicate,
-					shaclPredicates.contains(predicate));
+			Assertions.assertTrue(shaclPredicates.contains(predicate),
+					"Predicate used in test but not listed in ShaclSail: " + predicate);
 			STATIC_SHACL_PREDICATES.remove(predicate);
 		}
 
-	}
-
-	private Model getShacl(String shacl) throws IOException {
-		return Rio.parse(
-				new StringReader(shacl), "",
-				RDFFormat.TRIG);
 	}
 
 }

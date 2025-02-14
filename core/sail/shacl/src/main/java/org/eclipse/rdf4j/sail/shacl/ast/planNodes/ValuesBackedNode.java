@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl.ast.planNodes;
@@ -18,7 +21,6 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.sail.SailException;
 import org.eclipse.rdf4j.sail.shacl.ast.constraintcomponents.ConstraintComponent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,33 +38,36 @@ public class ValuesBackedNode implements PlanNode {
 	boolean printed = false;
 	private ValidationExecutionLogger validationExecutionLogger;
 
-	public ValuesBackedNode(SortedSet<Value> values, ConstraintComponent.Scope scope, Resource[] contexts) {
-
+	public ValuesBackedNode(SortedSet<Value> values, ConstraintComponent.Scope scope, Resource[] dataGraph) {
 		this.tuples = values.stream()
-				.map(c -> new ValidationTuple(c, scope, false, contexts))
+				.map(c -> new ValidationTuple(c, scope, false, dataGraph))
 				.collect(Collectors.toList());
-
 		this.values = values;
 		this.scope = scope;
 	}
 
 	@Override
-	public CloseableIteration<? extends ValidationTuple, SailException> iterator() {
+	public CloseableIteration<? extends ValidationTuple> iterator() {
 		return new LoggingCloseableIteration(this, validationExecutionLogger) {
 
 			final Iterator<ValidationTuple> iterator = tuples.iterator();
 
 			@Override
-			public void localClose() throws SailException {
+			protected void init() {
+				// no-op
 			}
 
 			@Override
-			public boolean localHasNext() throws SailException {
+			public void localClose() {
+			}
+
+			@Override
+			public boolean localHasNext() {
 				return iterator.hasNext();
 			}
 
 			@Override
-			public ValidationTuple loggingNext() throws SailException {
+			public ValidationTuple loggingNext() {
 				return iterator.next();
 			}
 
@@ -92,8 +97,7 @@ public class ValuesBackedNode implements PlanNode {
 
 	@Override
 	public String toString() {
-		return "ValuesBackedNode{" +
-				"values=" + values + '}';
+		return "ValuesBackedNode{" + "values=" + Formatter.prefix(values) + '}';
 	}
 
 	@Override

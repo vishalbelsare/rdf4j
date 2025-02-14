@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.spring.tx;
@@ -14,7 +17,7 @@ import java.io.InputStream;
 import java.io.Reader;
 import java.net.URL;
 
-import org.eclipse.rdf4j.common.iteration.Iteration;
+import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
@@ -33,8 +36,8 @@ import org.eclipse.rdf4j.spring.tx.exception.WriteDeniedException;
 /**
  * Connection wrapper that throws an exception if a write operation is attempted in a read-only transaction.
  *
- * @since 4.0.0
  * @author Florian Kleedorfer
+ * @since 4.0.0
  */
 public class TransactionalRepositoryConnection extends RepositoryConnectionWrapper {
 
@@ -63,7 +66,6 @@ public class TransactionalRepositoryConnection extends RepositoryConnectionWrapp
 	public void add(File file, String baseURI, RDFFormat dataFormat, Resource... contexts)
 			throws IOException, RDFParseException, RepositoryException {
 		throwExceptionIfReadonly();
-		;
 		super.add(file, baseURI, dataFormat, contexts);
 	}
 
@@ -82,9 +84,9 @@ public class TransactionalRepositoryConnection extends RepositoryConnectionWrapp
 	}
 
 	@Override
-	public <E extends Exception> void add(
-			Iteration<? extends Statement, E> statementIter, Resource... contexts)
-			throws RepositoryException, E {
+	public void add(
+			CloseableIteration<? extends Statement> statementIter, Resource... contexts)
+			throws RepositoryException {
 		throwExceptionIfReadonly();
 		super.add(statementIter, contexts);
 	}
@@ -130,9 +132,9 @@ public class TransactionalRepositoryConnection extends RepositoryConnectionWrapp
 	}
 
 	@Override
-	public <E extends Exception> void remove(
-			Iteration<? extends Statement, E> statementIter, Resource... contexts)
-			throws RepositoryException, E {
+	public void remove(
+			CloseableIteration<? extends Statement> statementIter, Resource... contexts)
+			throws RepositoryException {
 		throwExceptionIfReadonly();
 		super.remove(statementIter, contexts);
 	}

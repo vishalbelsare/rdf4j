@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.model.util;
 
@@ -12,7 +15,6 @@ import java.math.BigInteger;
 import java.util.Date;
 import java.util.IllformedLocaleException;
 import java.util.Locale;
-import java.util.Optional;
 
 import javax.xml.datatype.Duration;
 import javax.xml.datatype.XMLGregorianCalendar;
@@ -22,7 +24,6 @@ import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.base.CoreDatatype;
 import org.eclipse.rdf4j.model.datatypes.XMLDatatypeUtil;
-import org.eclipse.rdf4j.model.impl.SimpleLiteral;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
 
 /**
@@ -30,7 +31,6 @@ import org.eclipse.rdf4j.model.vocabulary.XSD;
  *
  * @author Arjohn Kampman
  * @author Peter Ansell
- *
  * @See {@link Values}
  */
 public class Literals {
@@ -53,29 +53,6 @@ public class Literals {
 	 */
 	public static String getLabel(Value v, String fallback) {
 		return v instanceof Literal ? getLabel((Literal) v, fallback) : fallback;
-	}
-
-	public static String getLabel(Optional<Value> v, String fallback) {
-		return v != null ? getLabel(v.orElseGet(null), fallback) : fallback;
-	}
-
-	/**
-	 * Retrieves the {@link org.eclipse.rdf4j.model.vocabulary.XSD.Datatype} value for the supplied Literal, if it has
-	 * one.
-	 *
-	 * @param l a Literal
-	 * @return an Optional {@link org.eclipse.rdf4j.model.vocabulary.XSD.Datatype} enum, if one is available. Note that
-	 *         the absence of this enum does <i>not</i> indicate that the literal has no datatype, merely that it has no
-	 *         cached enum representation of that datatype.
-	 * @since 3.5.0
-	 * @deprecated Use {@link Literal#getCoreDatatype()} instead.
-	 */
-	@Deprecated(since = "4.0.0", forRemoval = true)
-	public static Optional<XSD.Datatype> getXsdDatatype(Literal l) {
-		if (l instanceof SimpleLiteral) {
-			return ((SimpleLiteral) l).getXsdDatatype();
-		}
-		return Optional.empty();
 	}
 
 	/**
@@ -385,9 +362,9 @@ public class Literals {
 	 * @param object       an object to be converted to a typed literal.
 	 * @return a typed literal representation of the supplied object.
 	 * @throws NullPointerException If the object was null.
-	 * @deprecated since 3.5.0 - use {@link Values#literal(Object)} instead.
+	 * @deprecated Use {@link Values#literal(Object)} instead.
 	 */
-	@Deprecated
+	@Deprecated(since = "3.5.0")
 	public static Literal createLiteral(ValueFactory valueFactory, Object object) {
 		try {
 			return createLiteral(valueFactory, object, false);
@@ -408,9 +385,9 @@ public class Literals {
 	 * @return a typed literal representation of the supplied object.
 	 * @throws LiteralUtilException If the literal could not be created.
 	 * @throws NullPointerException If the object was null.
-	 * @deprecated since 3.5.0 - use {@link Values#literal(Object, boolean)} instead.
+	 * @deprecated Use {@link Values#literal(Object, boolean)} instead.
 	 */
-	@Deprecated
+	@Deprecated(since = "3.5.0")
 	public static Literal createLiteralOrFail(ValueFactory valueFactory, Object object) throws LiteralUtilException {
 		return createLiteral(valueFactory, object, true);
 	}
@@ -568,7 +545,7 @@ public class Literals {
 	public static boolean langMatches(String langTag, String langRange) {
 		boolean result = false;
 		if (langRange.equals("*")) {
-			result = langTag.length() > 0;
+			result = !langTag.isEmpty();
 		} else if (langTag.length() == langRange.length()) {
 			result = langTag.equalsIgnoreCase(langRange);
 		} else if (langTag.length() > langRange.length()) {

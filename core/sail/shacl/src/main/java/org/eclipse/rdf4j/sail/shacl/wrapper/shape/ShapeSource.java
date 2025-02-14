@@ -1,16 +1,19 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
- *  All rights reserved. This program and the accompanying materials
- *  are made available under the terms of the Eclipse Distribution License v1.0
- *  which accompanies this distribution, and is available at
- *  http://www.eclipse.org/org/documents/edl-v10.php.
- ******************************************************************************/
-
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Distribution License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.sail.shacl.wrapper.shape;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.eclipse.rdf4j.model.IRI;
@@ -18,11 +21,16 @@ import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDF4J;
 import org.eclipse.rdf4j.model.vocabulary.RSX;
+import org.eclipse.rdf4j.model.vocabulary.SESAME;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
+import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.Rio;
+import org.eclipse.rdf4j.sail.SailConnection;
+import org.eclipse.rdf4j.sail.shacl.ast.ShaclParsingException;
 
 public interface ShapeSource extends AutoCloseable {
 
@@ -34,6 +42,124 @@ public interface ShapeSource extends AutoCloseable {
 		} catch (IOException e) {
 			throw new IllegalStateException("Resource could not be read: " + filename, e);
 		}
+	}
+
+	static Stream<ShapesGraph> getRsxDataAndShapesGraphLink(SailConnection connection, Resource[] context) {
+		Stream<ShapesGraph> rsxDataAndShapesGraphLink;
+
+		try (var stream = connection.getStatements(null, RDF.TYPE, RSX.DataAndShapesGraphLink, false, context)
+				.stream()) {
+
+			var collect = stream.collect(Collectors.toList()); // consume entire stream to ensure that it can be closed
+
+			rsxDataAndShapesGraphLink = collect
+					.stream()
+					.map(statement -> {
+						List<Resource> dataGraphList;
+						List<Resource> shapesGraphList;
+
+						Resource subject = statement.getSubject();
+						Resource subjectContext = statement.getContext();
+
+						try (Stream<? extends Statement> dataGraphStream = connection
+								.getStatements(subject, RSX.dataGraph, null, false, subjectContext)
+								.stream()) {
+							dataGraphList = dataGraphStream
+									.map(Statement::getObject)
+									.map(v -> {
+										try {
+											return ((Resource) v);
+										} catch (ClassCastException e) {
+											throw new ShaclParsingException(
+													"Expected an Resource for rsx:dataGraph, found: " + v);
+										}
+									})
+									.collect(Collectors.toList());
+						}
+
+						try (Stream<? extends Statement> dataGraphStream = connection
+								.getStatements(subject, RSX.shapesGraph, null, false, subjectContext)
+								.stream()) {
+							shapesGraphList = dataGraphStream
+									.map(Statement::getObject)
+									.map(v -> {
+										try {
+											return ((Resource) v);
+										} catch (ClassCastException e) {
+											throw new ShaclParsingException(
+													"Expected an Resource for rsx:shapesGraph, found: " + v);
+										}
+									})
+									.collect(Collectors.toList());
+						}
+
+						return new ShapesGraph(dataGraphList, shapesGraphList);
+
+					})
+					.collect(Collectors.toList()) // consume entire stream to ensure that it can be closed
+					.stream();
+
+		}
+		return rsxDataAndShapesGraphLink;
+	}
+
+	static Stream<ShapesGraph> getRsxDataAndShapesGraphLink(RepositoryConnection connection, Resource[] context) {
+
+		Stream<ShapesGraph> rsxDataAndShapesGraphLink;
+		try (var stream = connection.getStatements(null, RDF.TYPE, RSX.DataAndShapesGraphLink, false, context)
+				.stream()) {
+
+			var collect = stream.collect(Collectors.toList()); // consume entire stream to ensure that it can be closed
+
+			rsxDataAndShapesGraphLink = collect
+					.stream()
+					.map(statement -> {
+						List<Resource> dataGraphList;
+						List<Resource> shapesGraphList;
+
+						Resource subject = statement.getSubject();
+						Resource subjectContext = statement.getContext();
+
+						try (Stream<? extends Statement> dataGraphStream = connection
+								.getStatements(subject, RSX.dataGraph, null, false, subjectContext)
+								.stream()) {
+							dataGraphList = dataGraphStream
+									.map(Statement::getObject)
+									.map(v -> {
+										try {
+											return ((Resource) v);
+										} catch (ClassCastException e) {
+											throw new ShaclParsingException(
+													"Expected an Resource for rsx:dataGraph, found: " + v);
+										}
+									})
+									.collect(Collectors.toList());
+						}
+
+						try (Stream<? extends Statement> dataGraphStream = connection
+								.getStatements(subject, RSX.shapesGraph, null, false, subjectContext)
+								.stream()) {
+							shapesGraphList = dataGraphStream
+									.map(Statement::getObject)
+									.map(v -> {
+										try {
+											return ((Resource) v);
+										} catch (ClassCastException e) {
+											throw new ShaclParsingException(
+													"Expected an Resource for rsx:shapesGraph, found: " + v);
+										}
+									})
+									.collect(Collectors.toList());
+						}
+
+						return new ShapesGraph(dataGraphList, shapesGraphList);
+
+					})
+					.collect(Collectors.toList()) // consume entire stream to ensure that it can be closed
+					.stream();
+
+		}
+		return rsxDataAndShapesGraphLink;
 	}
 
 	ShapeSource withContext(Resource[] context);
@@ -70,7 +196,24 @@ public interface ShapeSource extends AutoCloseable {
 			this.shapesGraph = shapesGraph
 					.stream()
 					.map(Statement::getObject)
-					.map(o -> ((Resource) o))
+					.map(o -> {
+						try {
+							return ((Resource) o);
+						} catch (ClassCastException e) {
+							throw new ShaclParsingException("Expected an Resource for sh:shapesGraph, found: " + o);
+						}
+					})
+					.map(ShapesGraph::handleDefaultGraph)
+					.toArray(Resource[]::new);
+		}
+
+		public ShapesGraph(List<Resource> dataGraph, List<Resource> shapesGraph) {
+			this.dataGraph = dataGraph
+					.stream()
+					.map(ShapesGraph::handleDefaultGraph)
+					.toArray(Resource[]::new);
+			this.shapesGraph = shapesGraph
+					.stream()
 					.map(ShapesGraph::handleDefaultGraph)
 					.toArray(Resource[]::new);
 		}
@@ -82,6 +225,9 @@ public interface ShapeSource extends AutoCloseable {
 
 		private static Resource handleDefaultGraph(Resource graph) {
 			if (RDF4J.NIL.equals(graph)) {
+				return null;
+			}
+			if (SESAME.NIL.equals(graph)) {
 				return null;
 			}
 			return graph;

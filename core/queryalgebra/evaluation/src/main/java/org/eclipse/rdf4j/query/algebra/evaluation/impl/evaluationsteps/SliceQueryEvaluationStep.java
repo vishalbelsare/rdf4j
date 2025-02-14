@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra.evaluation.impl.evaluationsteps;
 
@@ -11,7 +14,6 @@ import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.common.iteration.LimitIteration;
 import org.eclipse.rdf4j.common.iteration.OffsetIteration;
 import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.algebra.Slice;
 import org.eclipse.rdf4j.query.algebra.evaluation.QueryEvaluationStep;
 
@@ -42,7 +44,7 @@ public interface SliceQueryEvaluationStep extends QueryEvaluationStep {
 		}
 
 		@Override
-		public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(BindingSet bs) {
+		public CloseableIteration<BindingSet> evaluate(BindingSet bs) {
 			return new OffsetIteration<>(argument.evaluate(bs), offset);
 		}
 	}
@@ -60,12 +62,9 @@ public interface SliceQueryEvaluationStep extends QueryEvaluationStep {
 		}
 
 		@Override
-		public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(BindingSet bs) {
-			CloseableIteration<BindingSet, QueryEvaluationException> evaluate = argument.evaluate(bs);
-			OffsetIteration<BindingSet, QueryEvaluationException> offsetIter = new OffsetIteration<>(
-					evaluate, offset);
-			LimitIteration<BindingSet, QueryEvaluationException> limitIter = new LimitIteration<>(offsetIter, limit);
-			return limitIter;
+		public CloseableIteration<BindingSet> evaluate(BindingSet bs) {
+			CloseableIteration<? extends BindingSet> evaluate = argument.evaluate(bs);
+			return new LimitIteration<>(new OffsetIteration<>(evaluate, offset), limit);
 		}
 	}
 
@@ -80,7 +79,7 @@ public interface SliceQueryEvaluationStep extends QueryEvaluationStep {
 		}
 
 		@Override
-		public CloseableIteration<BindingSet, QueryEvaluationException> evaluate(BindingSet bs) {
+		public CloseableIteration<BindingSet> evaluate(BindingSet bs) {
 			return new LimitIteration<>(argument.evaluate(bs), limit);
 		}
 	}

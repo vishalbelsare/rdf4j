@@ -1,11 +1,13 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
- *  All rights reserved. This program and the accompanying materials
- *  are made available under the terms of the Eclipse Distribution License v1.0
- *  which accompanies this distribution, and is available at
- *  http://www.eclipse.org/org/documents/edl-v10.php.
- ******************************************************************************/
-
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Distribution License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.model.base;
 
 import java.util.Optional;
@@ -46,6 +48,18 @@ public interface CoreDatatype {
 
 	default Optional<GEO> asGEODatatype() {
 		return Optional.empty();
+	}
+
+	default XSD asXSDDatatypeOrNull() {
+		return isXSDDatatype() ? ((XSD) this) : null;
+	}
+
+	default RDF asRDFDatatypeOrNull() {
+		return isRDFDatatype() ? ((RDF) this) : null;
+	}
+
+	default GEO asGEODatatypeOrNull() {
+		return isGEODatatype() ? ((GEO) this) : null;
 	}
 
 	IRI getIri();
@@ -110,7 +124,7 @@ public interface CoreDatatype {
 		public static final String NAMESPACE = "http://www.w3.org/2001/XMLSchema#";
 
 		private static IRI iri(String localName) {
-			return new CoreDatatypeHelper.DatatypeIRI(NAMESPACE, localName);
+			return new InternedIRI(NAMESPACE, localName);
 		}
 
 		private final IRI iri;
@@ -275,7 +289,7 @@ public interface CoreDatatype {
 		public static final String NAMESPACE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
 
 		private static IRI iri(String localName) {
-			return new CoreDatatypeHelper.DatatypeIRI(NAMESPACE, localName);
+			return new InternedIRI(NAMESPACE, localName);
 		}
 
 		private final IRI iri;
@@ -316,7 +330,7 @@ public interface CoreDatatype {
 		public static final String NAMESPACE = "http://www.opengis.net/ont/geosparql#";
 
 		private static IRI iri(String localName) {
-			return new CoreDatatypeHelper.DatatypeIRI(NAMESPACE, localName);
+			return new InternedIRI(NAMESPACE, localName);
 		}
 
 		private final IRI iri;

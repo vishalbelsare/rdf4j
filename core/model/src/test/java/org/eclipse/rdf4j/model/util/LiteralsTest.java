@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.model.util;
 
@@ -18,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.IllformedLocaleException;
-import java.util.Optional;
 
 import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
@@ -27,7 +29,6 @@ import javax.xml.datatype.Duration;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Model;
-import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.LinkedHashModel;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
@@ -95,7 +96,7 @@ public class LiteralsTest {
 	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#normalizeLanguageTag(String)} .
 	 */
 	@Test
-	public void testNormaliseBCP47Tag() throws Exception {
+	public void testNormaliseBCP47Tag() {
 
 		for (String[] expectedNormalization : expectedTagNormalizations) {
 			assertThat(Literals.normalizeLanguageTag(expectedNormalization[0])).isEqualTo(expectedNormalization[1]);
@@ -112,7 +113,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetLabelLiteralString() throws Exception {
+	public final void testGetLabelLiteralString() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -122,7 +123,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetLabelValueString() throws Exception {
+	public final void testGetLabelValueString() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -132,7 +133,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetByteValueLiteralByte() throws Exception {
+	public final void testGetByteValueLiteralByte() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -141,7 +142,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetByteValueValueByte() throws Exception {
+	public final void testGetByteValueValueByte() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -151,7 +152,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetShortValueLiteralShort() throws Exception {
+	public final void testGetShortValueLiteralShort() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -161,7 +162,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetShortValueValueShort() throws Exception {
+	public final void testGetShortValueValueShort() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -170,7 +171,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetIntValueLiteralInt() throws Exception {
+	public final void testGetIntValueLiteralInt() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -179,7 +180,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetIntValueValueInt() throws Exception {
+	public final void testGetIntValueValueInt() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -189,7 +190,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetLongValueLiteralLong() throws Exception {
+	public final void testGetLongValueLiteralLong() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -198,7 +199,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetLongValueValueLong() throws Exception {
+	public final void testGetLongValueValueLong() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -209,7 +210,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetIntegerValueLiteralBigInteger() throws Exception {
+	public final void testGetIntegerValueLiteralBigInteger() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -220,7 +221,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetIntegerValueValueBigInteger() throws Exception {
+	public final void testGetIntegerValueValueBigInteger() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -231,7 +232,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetDecimalValueLiteralBigDecimal() throws Exception {
+	public final void testGetDecimalValueLiteralBigDecimal() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -242,7 +243,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetDecimalValueValueBigDecimal() throws Exception {
+	public final void testGetDecimalValueValueBigDecimal() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -252,7 +253,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetFloatValueLiteralFloat() throws Exception {
+	public final void testGetFloatValueLiteralFloat() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -262,7 +263,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetFloatValueValueFloat() throws Exception {
+	public final void testGetFloatValueValueFloat() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -272,7 +273,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetDoubleValueLiteralDouble() throws Exception {
+	public final void testGetDoubleValueLiteralDouble() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -282,7 +283,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetDoubleValueValueDouble() throws Exception {
+	public final void testGetDoubleValueValueDouble() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -292,7 +293,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetBooleanValueLiteralBoolean() throws Exception {
+	public final void testGetBooleanValueLiteralBoolean() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -302,7 +303,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetBooleanValueValueBoolean() throws Exception {
+	public final void testGetBooleanValueValueBoolean() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -313,7 +314,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetCalendarValueLiteralXMLGregorianCalendar() throws Exception {
+	public final void testGetCalendarValueLiteralXMLGregorianCalendar() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -324,7 +325,7 @@ public class LiteralsTest {
 	 */
 	@Disabled
 	@Test
-	public final void testGetCalendarValueValueXMLGregorianCalendar() throws Exception {
+	public final void testGetCalendarValueValueXMLGregorianCalendar() {
 		fail("Not yet implemented"); // TODO
 	}
 
@@ -347,7 +348,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralObjectNull() throws Exception {
+	public void testCreateLiteralObjectNull() {
 
 		Object obj = null;
 		try {
@@ -364,7 +365,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralObjectBoolean() throws Exception {
+	public void testCreateLiteralObjectBoolean() {
 
 		Object obj = Boolean.TRUE;
 		Literal l = Literals.createLiteral(SimpleValueFactory.getInstance(), obj);
@@ -380,7 +381,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralObjectByte() throws Exception {
+	public void testCreateLiteralObjectByte() {
 
 		Object obj = new Integer(42).byteValue();
 		Literal l = Literals.createLiteral(SimpleValueFactory.getInstance(), obj);
@@ -396,7 +397,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralObjectDouble() throws Exception {
+	public void testCreateLiteralObjectDouble() {
 
 		Object obj = new Double(42);
 		Literal l = Literals.createLiteral(SimpleValueFactory.getInstance(), obj);
@@ -412,7 +413,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralObjectFloat() throws Exception {
+	public void testCreateLiteralObjectFloat() {
 
 		Object obj = new Float(42);
 		Literal l = Literals.createLiteral(SimpleValueFactory.getInstance(), obj);
@@ -428,7 +429,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralObjectInteger() throws Exception {
+	public void testCreateLiteralObjectInteger() {
 
 		Object obj = new Integer(4);
 		Literal l = Literals.createLiteral(SimpleValueFactory.getInstance(), obj);
@@ -444,7 +445,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralObjectLong() throws Exception {
+	public void testCreateLiteralObjectLong() {
 
 		Object obj = new Long(42);
 		Literal l = Literals.createLiteral(SimpleValueFactory.getInstance(), obj);
@@ -460,7 +461,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralObjectShort() throws Exception {
+	public void testCreateLiteralObjectShort() {
 
 		Object obj = Short.parseShort("42");
 		Literal l = Literals.createLiteral(SimpleValueFactory.getInstance(), obj);
@@ -476,7 +477,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralObjectXMLGregorianCalendar() throws Exception {
+	public void testCreateLiteralObjectXMLGregorianCalendar() {
 
 		GregorianCalendar c = new GregorianCalendar();
 		c.setTime(new Date());
@@ -499,7 +500,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralObjectDate() throws Exception {
+	public void testCreateLiteralObjectDate() {
 
 		Object obj = new Date();
 		Literal l = Literals.createLiteral(SimpleValueFactory.getInstance(), obj);
@@ -514,7 +515,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralObjectString() throws Exception {
+	public void testCreateLiteralObjectString() {
 
 		Object obj = "random unique string";
 		Literal l = Literals.createLiteral(SimpleValueFactory.getInstance(), obj);
@@ -530,7 +531,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralObjectObject() throws Exception {
+	public void testCreateLiteralObjectObject() {
 
 		Object obj = new Object();
 		Literal l = Literals.createLiteral(SimpleValueFactory.getInstance(), obj);
@@ -545,7 +546,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralOrFailObjectNull() throws Exception {
+	public void testCreateLiteralOrFailObjectNull() {
 
 		Object obj = null;
 		try {
@@ -562,7 +563,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralOrFailObjectBoolean() throws Exception {
+	public void testCreateLiteralOrFailObjectBoolean() {
 
 		Object obj = Boolean.TRUE;
 		Literal l = Literals.createLiteralOrFail(SimpleValueFactory.getInstance(), obj);
@@ -578,7 +579,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralOrFailObjectByte() throws Exception {
+	public void testCreateLiteralOrFailObjectByte() {
 
 		Object obj = new Integer(42).byteValue();
 		Literal l = Literals.createLiteralOrFail(SimpleValueFactory.getInstance(), obj);
@@ -594,7 +595,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralOrFailObjectDouble() throws Exception {
+	public void testCreateLiteralOrFailObjectDouble() {
 
 		Object obj = new Double(42);
 		Literal l = Literals.createLiteralOrFail(SimpleValueFactory.getInstance(), obj);
@@ -610,7 +611,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralOrFailObjectFloat() throws Exception {
+	public void testCreateLiteralOrFailObjectFloat() {
 
 		Object obj = new Float(42);
 		Literal l = Literals.createLiteralOrFail(SimpleValueFactory.getInstance(), obj);
@@ -626,7 +627,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralOrFailObjectInteger() throws Exception {
+	public void testCreateLiteralOrFailObjectInteger() {
 
 		Object obj = new Integer(4);
 		Literal l = Literals.createLiteralOrFail(SimpleValueFactory.getInstance(), obj);
@@ -642,7 +643,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralOrFailObjectLong() throws Exception {
+	public void testCreateLiteralOrFailObjectLong() {
 
 		Object obj = new Long(42);
 		Literal l = Literals.createLiteralOrFail(SimpleValueFactory.getInstance(), obj);
@@ -658,7 +659,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralOrFailObjectShort() throws Exception {
+	public void testCreateLiteralOrFailObjectShort() {
 
 		Object obj = Short.parseShort("42");
 		Literal l = Literals.createLiteralOrFail(SimpleValueFactory.getInstance(), obj);
@@ -674,7 +675,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralOrFailObjectXMLGregorianCalendar() throws Exception {
+	public void testCreateLiteralOrFailObjectXMLGregorianCalendar() {
 
 		GregorianCalendar c = new GregorianCalendar();
 		c.setTime(new Date());
@@ -697,7 +698,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralOrFailObjectDate() throws Exception {
+	public void testCreateLiteralOrFailObjectDate() {
 
 		Object obj = new Date();
 		Literal l = Literals.createLiteralOrFail(SimpleValueFactory.getInstance(), obj);
@@ -712,7 +713,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralOrFailObjectString() throws Exception {
+	public void testCreateLiteralOrFailObjectString() {
 
 		Object obj = "random unique string";
 		Literal l = Literals.createLiteralOrFail(SimpleValueFactory.getInstance(), obj);
@@ -728,7 +729,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCreateLiteralOrFailObjectObject() throws Exception {
+	public void testCreateLiteralOrFailObjectObject() {
 
 		Object obj = new Object();
 		try {
@@ -745,7 +746,7 @@ public class LiteralsTest {
 	 * .
 	 */
 	@Test
-	public void testCanCreateLiteralObjectNull() throws Exception {
+	public void testCanCreateLiteralObjectNull() {
 
 		Object obj = null;
 		assertFalse(Literals.canCreateLiteral(obj));
@@ -755,7 +756,7 @@ public class LiteralsTest {
 	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#canCreateLiteral(Object)} .
 	 */
 	@Test
-	public void testCanCreateLiteralObjectBoolean() throws Exception {
+	public void testCanCreateLiteralObjectBoolean() {
 
 		Object obj = Boolean.TRUE;
 		assertTrue(Literals.canCreateLiteral(obj));
@@ -766,7 +767,7 @@ public class LiteralsTest {
 	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#canCreateLiteral(Object)} .
 	 */
 	@Test
-	public void testCanCreateLiteralObjectByte() throws Exception {
+	public void testCanCreateLiteralObjectByte() {
 
 		Object obj = new Integer(42).byteValue();
 		assertTrue(Literals.canCreateLiteral(obj));
@@ -777,7 +778,7 @@ public class LiteralsTest {
 	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#canCreateLiteral(Object)} .
 	 */
 	@Test
-	public void testCanCreateLiteralObjectDouble() throws Exception {
+	public void testCanCreateLiteralObjectDouble() {
 
 		Object obj = new Double(42);
 		assertTrue(Literals.canCreateLiteral(obj));
@@ -788,7 +789,7 @@ public class LiteralsTest {
 	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#canCreateLiteral(Object)} .
 	 */
 	@Test
-	public void testCanCreateLiteralObjectFloat() throws Exception {
+	public void testCanCreateLiteralObjectFloat() {
 
 		Object obj = new Float(42);
 		assertTrue(Literals.canCreateLiteral(obj));
@@ -799,7 +800,7 @@ public class LiteralsTest {
 	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#canCreateLiteral(Object)} .
 	 */
 	@Test
-	public void testCanCreateLiteralObjectInteger() throws Exception {
+	public void testCanCreateLiteralObjectInteger() {
 
 		Object obj = new Integer(4);
 		assertTrue(Literals.canCreateLiteral(obj));
@@ -810,7 +811,7 @@ public class LiteralsTest {
 	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#canCreateLiteral(Object)} .
 	 */
 	@Test
-	public void testCanCreateLiteralObjectLong() throws Exception {
+	public void testCanCreateLiteralObjectLong() {
 
 		Object obj = new Long(42);
 		assertTrue(Literals.canCreateLiteral(obj));
@@ -821,7 +822,7 @@ public class LiteralsTest {
 	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#canCreateLiteral(Object)} .
 	 */
 	@Test
-	public void testCanCreateLiteralObjectShort() throws Exception {
+	public void testCanCreateLiteralObjectShort() {
 
 		Object obj = Short.parseShort("42");
 		assertTrue(Literals.canCreateLiteral(obj));
@@ -845,7 +846,7 @@ public class LiteralsTest {
 	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#canCreateLiteral(Object)} .
 	 */
 	@Test
-	public void testCanCreateLiteralObjectDate() throws Exception {
+	public void testCanCreateLiteralObjectDate() {
 
 		Object obj = new Date();
 		assertTrue(Literals.canCreateLiteral(obj));
@@ -856,7 +857,7 @@ public class LiteralsTest {
 	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#canCreateLiteral(Object)} .
 	 */
 	@Test
-	public void testCanCreateLiteralObjectString() throws Exception {
+	public void testCanCreateLiteralObjectString() {
 
 		Object obj = "random unique string";
 		assertTrue(Literals.canCreateLiteral(obj));
@@ -867,40 +868,11 @@ public class LiteralsTest {
 	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#canCreateLiteral(Object)} .
 	 */
 	@Test
-	public void testCanCreateLiteralObjectObject() throws Exception {
+	public void testCanCreateLiteralObjectObject() {
 
 		Object obj = new Object();
 		assertFalse(Literals.canCreateLiteral(obj));
 
 	}
 
-	/**
-	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#getLabel(Optional, String)}} .
-	 */
-	@Test
-	public void testGetLabelForOptional() throws Exception {
-
-		Literal lit = vf.createLiteral(1.0);
-		model.add(foo, bar, lit);
-
-		Optional<Value> result = Models.object(model);
-		String label = Literals.getLabel(result, "fallback");
-		assertNotNull(label);
-		assertTrue(label.equals("1.0"));
-	}
-
-	/**
-	 * Test method for {@link org.eclipse.rdf4j.model.util.Literals#getLabel(Optional, String)}} .
-	 */
-	@Test
-	public void testGetLabelForOptionalInFallback() throws Exception {
-
-		Literal lit = vf.createLiteral(1.0);
-		model.add(foo, bar, lit);
-
-		Optional<Value> result = Models.object(model);
-		String label = Literals.getLabel((Optional<Value>) null, "fallback");
-		assertNotNull(label);
-		assertTrue(label.equals("fallback"));
-	}
 }

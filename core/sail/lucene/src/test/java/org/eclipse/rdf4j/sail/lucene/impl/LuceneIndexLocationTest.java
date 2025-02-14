@@ -1,7 +1,19 @@
+/*******************************************************************************
+ * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Distribution License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.sail.lucene.impl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.File;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.stream.IntStream;
 
@@ -14,12 +26,10 @@ import org.eclipse.rdf4j.repository.sail.SailRepositoryConnection;
 import org.eclipse.rdf4j.sail.Sail;
 import org.eclipse.rdf4j.sail.lucene.LuceneSail;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,12 +40,9 @@ import org.slf4j.LoggerFactory;
  */
 public class LuceneIndexLocationTest {
 
-	private Logger log = LoggerFactory.getLogger(getClass());
+	private final Logger log = LoggerFactory.getLogger(getClass());
 
-	private String luceneIndexPath = "sail-index";
-
-	@Rule
-	public TemporaryFolder tmpFolder = new TemporaryFolder();
+	private final String luceneIndexPath = "sail-index";
 
 	Sail sail;
 
@@ -43,17 +50,14 @@ public class LuceneIndexLocationTest {
 
 	RepositoryConnection connection;
 
-	private ValueFactory vf = SimpleValueFactory.getInstance();
+	private final ValueFactory vf = SimpleValueFactory.getInstance();
 
 	/**
 	 * Set up memory storage located within temporary folder
 	 *
-	 * @throws Exception
 	 */
-	@Before
-	public void setUp() throws Exception {
-		File dataDir = tmpFolder.newFolder();
-
+	@BeforeEach
+	public void setUp(@TempDir File dataDir) {
 		sail = new MemoryStore();
 
 		LuceneSail lucene = new LuceneSail();
@@ -76,8 +80,8 @@ public class LuceneIndexLocationTest {
 		connection = repository.getConnection();
 	}
 
-	@After
-	public void tearDown() throws IOException, RepositoryException {
+	@AfterEach
+	public void tearDown() throws RepositoryException {
 		try {
 			if (connection != null) {
 				connection.close();
@@ -92,19 +96,17 @@ public class LuceneIndexLocationTest {
 	/**
 	 * Check Lucene index location
 	 *
-	 * @throws Exception
 	 */
 	@Test
-	public void IndexLocationTest() throws Exception {
+	public void IndexLocationTest() {
 		File dataDir = repository.getDataDir();
 		Path lucenePath = repository.getDataDir().toPath().resolve(luceneIndexPath);
 
 		log.info("Lucene index location: {}", lucenePath);
-		Assert.assertEquals(dataDir.getAbsolutePath() + File.separator + luceneIndexPath,
+		assertEquals(dataDir.getAbsolutePath() + File.separator + luceneIndexPath,
 				lucenePath.toAbsolutePath().toString());
 
-		Assert.assertTrue(lucenePath.toFile().exists());
-		Assert.assertTrue(lucenePath.toFile().isDirectory());
+		assertTrue(lucenePath.toFile().exists());
+		assertTrue(lucenePath.toFile().isDirectory());
 	}
-
 }

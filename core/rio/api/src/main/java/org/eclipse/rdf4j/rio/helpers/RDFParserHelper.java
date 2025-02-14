@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.rio.helpers;
 
@@ -86,7 +89,7 @@ public class RDFParserHelper {
 	 * @throws RDFParseException If there was an error during the process that could not be recovered from, based on
 	 *                           settings in the given parser config.
 	 */
-	public static final Literal createLiteral(String label, String lang, IRI datatype, ParserConfig parserConfig,
+	public static Literal createLiteral(String label, String lang, IRI datatype, ParserConfig parserConfig,
 			ParseErrorListener errListener, ValueFactory valueFactory, long lineNo, long columnNo)
 			throws RDFParseException {
 		if (label == null) {
@@ -187,7 +190,7 @@ public class RDFParserHelper {
 			try {
 				// Removes datatype for langString datatype with no language tag when VERIFY_DATATYPE_VALUES is False.
 				if ((workingDatatype == null || RDF.LANGSTRING.equals(workingDatatype))
-						&& (!workingLang.isPresent() || workingLang.get().isEmpty())
+						&& (workingLang.isEmpty() || workingLang.get().isEmpty())
 						&& !parserConfig.get(BasicParserSettings.VERIFY_DATATYPE_VALUES)) {
 					workingLang = Optional.ofNullable(null);
 					workingDatatype = null;

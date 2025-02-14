@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.shacl.config;
 
@@ -23,7 +26,6 @@ import static org.eclipse.rdf4j.sail.shacl.config.ShaclSailSchema.TRANSACTIONAL_
 import static org.eclipse.rdf4j.sail.shacl.config.ShaclSailSchema.VALIDATION_ENABLED;
 import static org.eclipse.rdf4j.sail.shacl.config.ShaclSailSchema.VALIDATION_RESULTS_LIMIT_PER_CONSTRAINT;
 import static org.eclipse.rdf4j.sail.shacl.config.ShaclSailSchema.VALIDATION_RESULTS_LIMIT_TOTAL;
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Set;
@@ -36,8 +38,10 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.impl.TreeModel;
 import org.eclipse.rdf4j.model.util.ModelBuilder;
 import org.eclipse.rdf4j.model.util.Values;
+import org.eclipse.rdf4j.model.vocabulary.CONFIG;
 import org.eclipse.rdf4j.model.vocabulary.RDF4J;
 import org.eclipse.rdf4j.sail.config.SailConfigException;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 public class ShaclSailConfigTest {
@@ -72,6 +76,22 @@ public class ShaclSailConfigTest {
 		BNode implNode = vf.createBNode();
 		ModelBuilder mb = new ModelBuilder().subject(implNode);
 
+		mb.add(CONFIG.Shacl.parallelValidation, false);
+		mb.add(CONFIG.Shacl.logValidationPlans, false);
+		mb.add(CONFIG.Shacl.logValidationViolations, false);
+		mb.add(CONFIG.Shacl.validationEnabled, false);
+		mb.add(CONFIG.Shacl.cacheSelectNodes, false);
+		mb.add(CONFIG.Shacl.globalLogValidationExecution, false);
+		mb.add(CONFIG.Shacl.rdfsSubClassReasoning, true);
+		mb.add(CONFIG.Shacl.performanceLogging, false);
+		mb.add(CONFIG.Shacl.eclipseRdf4jShaclExtensions, false);
+		mb.add(CONFIG.Shacl.dashDataShapes, false);
+		mb.add(CONFIG.Shacl.serializableValidation, true);
+
+		mb.add(CONFIG.Shacl.validationResultsLimitTotal, 1000);
+		mb.add(CONFIG.Shacl.validationResultsLimitPerConstraint, 30);
+		mb.add(CONFIG.Shacl.transactionalValidationLimit, 90);
+
 		mb.add(PARALLEL_VALIDATION, true);
 		mb.add(LOG_VALIDATION_PLANS, true);
 		mb.add(LOG_VALIDATION_VIOLATIONS, true);
@@ -95,20 +115,20 @@ public class ShaclSailConfigTest {
 
 		shaclSailConfig.parse(mb.build(), implNode);
 
-		assertThat(shaclSailConfig.isParallelValidation()).isTrue();
-		assertThat(shaclSailConfig.isLogValidationPlans()).isTrue();
-		assertThat(shaclSailConfig.isLogValidationViolations()).isTrue();
-		assertThat(shaclSailConfig.isValidationEnabled()).isTrue();
-		assertThat(shaclSailConfig.isCacheSelectNodes()).isTrue();
-		assertThat(shaclSailConfig.isGlobalLogValidationExecution()).isTrue();
-		assertThat(shaclSailConfig.isRdfsSubClassReasoning()).isFalse();
-		assertThat(shaclSailConfig.isPerformanceLogging()).isTrue();
-		assertThat(shaclSailConfig.isSerializableValidation()).isFalse();
-		assertThat(shaclSailConfig.isEclipseRdf4jShaclExtensions()).isTrue();
-		assertThat(shaclSailConfig.isDashDataShapes()).isTrue();
-		assertThat(shaclSailConfig.getValidationResultsLimitTotal()).isEqualTo(100);
-		assertThat(shaclSailConfig.getValidationResultsLimitPerConstraint()).isEqualTo(3);
-		assertThat(shaclSailConfig.getTransactionalValidationLimit()).isEqualTo(9);
+		assertThat(shaclSailConfig.isParallelValidation()).isFalse();
+		assertThat(shaclSailConfig.isLogValidationPlans()).isFalse();
+		assertThat(shaclSailConfig.isLogValidationViolations()).isFalse();
+		assertThat(shaclSailConfig.isValidationEnabled()).isFalse();
+		assertThat(shaclSailConfig.isCacheSelectNodes()).isFalse();
+		assertThat(shaclSailConfig.isGlobalLogValidationExecution()).isFalse();
+		assertThat(shaclSailConfig.isRdfsSubClassReasoning()).isTrue();
+		assertThat(shaclSailConfig.isPerformanceLogging()).isFalse();
+		assertThat(shaclSailConfig.isSerializableValidation()).isTrue();
+		assertThat(shaclSailConfig.isEclipseRdf4jShaclExtensions()).isFalse();
+		assertThat(shaclSailConfig.isDashDataShapes()).isFalse();
+		assertThat(shaclSailConfig.getValidationResultsLimitTotal()).isEqualTo(1000);
+		assertThat(shaclSailConfig.getValidationResultsLimitPerConstraint()).isEqualTo(30);
+		assertThat(shaclSailConfig.getTransactionalValidationLimit()).isEqualTo(90);
 		assertThat(shaclSailConfig.getShapesGraphs()).isEqualTo(shapesGraphs);
 
 	}
@@ -119,12 +139,13 @@ public class ShaclSailConfigTest {
 		BNode implNode = SimpleValueFactory.getInstance().createBNode();
 		ModelBuilder mb = new ModelBuilder().subject(implNode);
 
-		mb.add(PARALLEL_VALIDATION, false);
+		mb.add(CONFIG.Shacl.parallelValidation, false);
 
 		shaclSailConfig.parse(mb.build(), implNode);
 
 		assertThat(shaclSailConfig.isParallelValidation()).isFalse();
 		assertThat(shaclSailConfig.isCacheSelectNodes()).isTrue();
+		assertThat(shaclSailConfig.getShapesGraphs()).hasSameElementsAs(ShaclSailConfig.SHAPES_GRAPHS_DEFAULT);
 	}
 
 	@Test
@@ -133,7 +154,7 @@ public class ShaclSailConfigTest {
 		BNode implNode = SimpleValueFactory.getInstance().createBNode();
 		ModelBuilder mb = new ModelBuilder().subject(implNode);
 
-		mb.add(PARALLEL_VALIDATION, "I'm not a boolean");
+		mb.add(CONFIG.Shacl.parallelValidation, "I'm not a boolean");
 
 		assertThrows(SailConfigException.class, () -> {
 			shaclSailConfig.parse(mb.build(), implNode);
@@ -159,21 +180,21 @@ public class ShaclSailConfigTest {
 
 		Model m = new TreeModel();
 		Resource node = shaclSailConfig.export(m);
-		assertTrue(m.contains(node, PARALLEL_VALIDATION, null));
-		assertTrue(m.contains(node, LOG_VALIDATION_PLANS, null));
-		assertTrue(m.contains(node, LOG_VALIDATION_VIOLATIONS, null));
-		assertTrue(m.contains(node, VALIDATION_ENABLED, null));
-		assertTrue(m.contains(node, CACHE_SELECT_NODES, null));
-		assertTrue(m.contains(node, GLOBAL_LOG_VALIDATION_EXECUTION, null));
-		assertTrue(m.contains(node, RDFS_SUB_CLASS_REASONING, null));
-		assertTrue(m.contains(node, PERFORMANCE_LOGGING, null));
-		assertTrue(m.contains(node, SERIALIZABLE_VALIDATION, null));
-		assertTrue(m.contains(node, ECLIPSE_RDF4J_SHACL_EXTENSIONS, null));
-		assertTrue(m.contains(node, DASH_DATA_SHAPES, null));
-		assertTrue(m.contains(node, VALIDATION_RESULTS_LIMIT_TOTAL, null));
-		assertTrue(m.contains(node, VALIDATION_RESULTS_LIMIT_PER_CONSTRAINT, null));
-		assertTrue(m.contains(node, TRANSACTIONAL_VALIDATION_LIMIT, null));
-		assertTrue(m.contains(node, SHAPES_GRAPH, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.parallelValidation, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.logValidationPlans, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.logValidationViolations, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.validationEnabled, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.cacheSelectNodes, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.globalLogValidationExecution, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.rdfsSubClassReasoning, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.performanceLogging, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.serializableValidation, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.eclipseRdf4jShaclExtensions, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.dashDataShapes, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.validationResultsLimitPerConstraint, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.validationResultsLimitTotal, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.transactionalValidationLimit, null));
+		Assertions.assertTrue(m.contains(node, CONFIG.Shacl.shapesGraph, null));
 
 	}
 

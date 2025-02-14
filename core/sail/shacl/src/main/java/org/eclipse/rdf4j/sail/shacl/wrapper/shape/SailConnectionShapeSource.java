@@ -1,11 +1,13 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
- *  All rights reserved. This program and the accompanying materials
- *  are made available under the terms of the Eclipse Distribution License v1.0
- *  which accompanies this distribution, and is available at
- *  http://www.eclipse.org/org/documents/edl-v10.php.
- ******************************************************************************/
-
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Distribution License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.sail.shacl.wrapper.shape;
 
 import java.util.stream.Collectors;
@@ -15,6 +17,8 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.util.Statements;
+import org.eclipse.rdf4j.model.vocabulary.DASH;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
 import org.eclipse.rdf4j.sail.SailConnection;
@@ -45,15 +49,23 @@ public class SailConnectionShapeSource implements ShapeSource {
 
 	public Stream<ShapesGraph> getAllShapeContexts() {
 		assert context == null;
+
+		Stream<ShapesGraph> rsxDataAndShapesGraphLink = ShapeSource.getRsxDataAndShapesGraphLink(connection, context);
+
+		Stream<ShapesGraph> shapesGraphStream;
 		try (Stream<? extends Statement> stream = connection.getStatements(null, SHACL.SHAPES_GRAPH, null, false)
 				.stream()) {
 
-			return stream
+			shapesGraphStream = stream
 					.collect(Collectors.groupingBy(Statement::getSubject))
 					.entrySet()
 					.stream()
-					.map(entry -> new ShapeSource.ShapesGraph(entry.getKey(), entry.getValue()));
+					.map(entry -> new ShapesGraph(entry.getKey(), entry.getValue()))
+					.collect(Collectors.toList())
+					.stream();
 		}
+
+		return Stream.concat(rsxDataAndShapesGraphLink, shapesGraphStream);
 
 	}
 
@@ -78,8 +90,38 @@ public class SailConnectionShapeSource implements ShapeSource {
 	}
 
 	public boolean isType(Resource subject, IRI type) {
-		assert context != null;
-		return connection.hasStatement(subject, RDF.TYPE, type, true, context);
+		if (DASH_CONSTANTS.contains(subject, RDF.TYPE, type)
+				|| connection.hasStatement(subject, RDF.TYPE, type, true, context)) {
+			return true;
+		}
+		if (!(type == SHACL.NODE_SHAPE || type == SHACL.PROPERTY_SHAPE)) {
+			if (type.equals(SHACL.NODE_SHAPE)) {
+				type = SHACL.NODE_SHAPE;
+			} else if (type.equals(SHACL.PROPERTY_SHAPE)) {
+				type = SHACL.PROPERTY_SHAPE;
+			}
+		}
+
+		if (type == SHACL.PROPERTY_SHAPE) {
+			return connection.hasStatement(subject, SHACL.PATH, null, true, context);
+		} else if (type == SHACL.NODE_SHAPE) {
+			if (connection.hasStatement(subject, SHACL.PATH, null, true, context)) {
+				return false;
+			}
+			if (connection.hasStatement(null, SHACL.NODE, subject, true, context)) {
+				return true;
+			}
+			try (Stream<? extends Statement> stream = connection.getStatements(subject, null, null, true, context)
+					.stream()) {
+				return stream
+						.map(Statement::getPredicate)
+						.map(Value::stringValue)
+						.anyMatch(predicate -> predicate.startsWith(SHACL.NAMESPACE)
+								|| predicate.startsWith(DASH.NAMESPACE));
+			}
+		} else {
+			return false;
+		}
 	}
 
 	public Stream<Resource> getSubjects(Predicates predicate) {
@@ -103,7 +145,11 @@ public class SailConnectionShapeSource implements ShapeSource {
 
 	public Stream<Statement> getAllStatements(Resource id) {
 		assert context != null;
-		return connection.getStatements(id, null, null, true, context).stream().map(s -> ((Statement) s));
+		return connection.getStatements(id, null, null, true, context)
+				.stream()
+				.map(s -> ((Statement) s))
+				.map(Statements::stripContext)
+				.distinct();
 	}
 
 	public Value getRdfFirst(Resource subject) {

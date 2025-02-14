@@ -1,31 +1,28 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.query.algebra;
 
 import java.util.Set;
 
+import org.eclipse.rdf4j.common.order.AvailableStatementOrder;
+
 /**
  * An abstract superclass for unary tuple operators which, by definition, has one argument.
  */
-public abstract class UnaryTupleOperator extends AbstractQueryModelNode implements TupleExpr, GraphPatternGroupable {
-
-	/*-----------*
-	 * Variables *
-	 *-----------*/
+public abstract class UnaryTupleOperator extends AbstractQueryModelNode implements TupleExpr {
 
 	/**
 	 * The operator's argument.
 	 */
 	protected TupleExpr arg;
-
-	/*--------------*
-	 * Constructors *
-	 *--------------*/
 
 	protected UnaryTupleOperator() {
 	}
@@ -38,10 +35,6 @@ public abstract class UnaryTupleOperator extends AbstractQueryModelNode implemen
 	protected UnaryTupleOperator(TupleExpr arg) {
 		setArg(arg);
 	}
-
-	/*---------*
-	 * Methods *
-	 *---------*/
 
 	/**
 	 * Gets the argument of this unary tuple operator.
@@ -83,19 +76,21 @@ public abstract class UnaryTupleOperator extends AbstractQueryModelNode implemen
 	public void replaceChildNode(QueryModelNode current, QueryModelNode replacement) {
 		if (arg == current) {
 			setArg((TupleExpr) replacement);
-		} else {
-			super.replaceChildNode(current, replacement);
 		}
 	}
 
 	@Override
-	public boolean equals(Object other) {
-		if (other instanceof UnaryTupleOperator) {
-			UnaryTupleOperator o = (UnaryTupleOperator) other;
-			return arg.equals(o.getArg());
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (!(o instanceof UnaryTupleOperator)) {
+			return false;
 		}
 
-		return false;
+		UnaryTupleOperator that = (UnaryTupleOperator) o;
+
+		return arg.equals(that.arg);
 	}
 
 	@Override
@@ -106,8 +101,23 @@ public abstract class UnaryTupleOperator extends AbstractQueryModelNode implemen
 	@Override
 	public UnaryTupleOperator clone() {
 		UnaryTupleOperator clone = (UnaryTupleOperator) super.clone();
-		clone.setArg(getArg().clone());
+		clone.arg = getArg().clone();
+		clone.arg.setParentNode(clone);
 		return clone;
 	}
 
+	@Override
+	public Set<Var> getSupportedOrders(AvailableStatementOrder tripleSource) {
+		return arg.getSupportedOrders(tripleSource);
+	}
+
+	@Override
+	public void setOrder(Var var) {
+		arg.setOrder(var);
+	}
+
+	@Override
+	public Var getOrder() {
+		return arg.getOrder();
+	}
 }

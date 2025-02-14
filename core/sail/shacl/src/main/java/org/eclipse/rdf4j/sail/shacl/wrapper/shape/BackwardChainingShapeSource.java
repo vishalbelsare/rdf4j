@@ -1,11 +1,13 @@
 /*******************************************************************************
  * Copyright (c) 2022 Eclipse RDF4J contributors.
- *  All rights reserved. This program and the accompanying materials
- *  are made available under the terms of the Eclipse Distribution License v1.0
- *  which accompanies this distribution, and is available at
- *  http://www.eclipse.org/org/documents/edl-v10.php.
- ******************************************************************************/
-
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Distribution License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
+ *******************************************************************************/
 package org.eclipse.rdf4j.sail.shacl.wrapper.shape;
 
 import java.util.stream.Collectors;
@@ -16,6 +18,7 @@ import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.util.Statements;
+import org.eclipse.rdf4j.model.vocabulary.DASH;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
@@ -47,16 +50,23 @@ public class BackwardChainingShapeSource implements ShapeSource {
 
 	public Stream<ShapesGraph> getAllShapeContexts() {
 		assert context != null;
-		try (Stream<? extends Statement> stream = connection
-				.getStatements(null, SHACL.SHAPES_GRAPH, null, false, context)
-				.stream()) {
 
-			return stream
+		Stream<ShapesGraph> rsxDataAndShapesGraphLink = ShapeSource.getRsxDataAndShapesGraphLink(connection, context);
+
+		Stream<ShapesGraph> shaclShapesGraph;
+
+		try (var stream = connection.getStatements(null, SHACL.SHAPES_GRAPH, null, false, context).stream()) {
+
+			var collect = stream.collect(Collectors.toList()); // consume entire stream to ensure that it can be closed
+
+			shaclShapesGraph = collect.stream()
 					.collect(Collectors.groupingBy(Statement::getSubject))
 					.entrySet()
 					.stream()
 					.map(entry -> new ShapeSource.ShapesGraph(entry.getKey(), entry.getValue()));
 		}
+
+		return Stream.concat(rsxDataAndShapesGraphLink, shaclShapesGraph);
 
 	}
 
@@ -66,22 +76,20 @@ public class BackwardChainingShapeSource implements ShapeSource {
 		Stream<Resource> inferred = connection.getStatements(null, RDF.TYPE, RDFS.CLASS, true, context)
 				.stream()
 				.map(Statement::getSubject)
-				.filter(this::isNodeShapeOrPropertyShape
-				);
+				.filter(this::isNodeShapeOrPropertyShape);
 
 		return Stream
 				.of(getSubjects(Predicates.TARGET_NODE), getSubjects(Predicates.TARGET_CLASS),
 						getSubjects(Predicates.TARGET_SUBJECTS_OF), getSubjects(Predicates.TARGET_OBJECTS_OF),
-						getSubjects(Predicates.TARGET_PROP), getSubjects(Predicates.RSX_targetShape),
-						inferred)
+						getSubjects(Predicates.TARGET_PROP), getSubjects(Predicates.RSX_targetShape), inferred)
 				.reduce(Stream::concat)
 				.get()
 				.distinct();
 	}
 
 	private boolean isNodeShapeOrPropertyShape(Resource id) {
-		return connection.hasStatement(id, RDF.TYPE, SHACL.NODE_SHAPE, true, context) ||
-				connection.hasStatement(id, RDF.TYPE, SHACL.PROPERTY_SHAPE, true, context);
+		return connection.hasStatement(id, RDF.TYPE, SHACL.NODE_SHAPE, true, context)
+				|| connection.hasStatement(id, RDF.TYPE, SHACL.PROPERTY_SHAPE, true, context);
 	}
 
 	public Stream<Resource> getSubjects(Predicates predicate) {
@@ -126,7 +134,9 @@ public class BackwardChainingShapeSource implements ShapeSource {
 		return Stream.concat(
 				connection.getStatements(id, null, null, true, context).stream().map(s -> ((Statement) s)),
 				backwardsChained
-		);
+		)
+				.map(Statements::stripContext)
+				.distinct();
 	}
 
 	public Value getRdfFirst(Resource subject) {
@@ -139,8 +149,38 @@ public class BackwardChainingShapeSource implements ShapeSource {
 
 	public boolean isType(Resource subject, IRI type) {
 		assert context != null;
-		return DASH_CONSTANTS.contains(subject, RDF.TYPE, type)
-				|| connection.hasStatement(subject, RDF.TYPE, type, true, context);
+		if (DASH_CONSTANTS.contains(subject, RDF.TYPE, type)
+				|| connection.hasStatement(subject, RDF.TYPE, type, true, context)) {
+			return true;
+		}
+		if (!(type == SHACL.NODE_SHAPE || type == SHACL.PROPERTY_SHAPE)) {
+			if (type.equals(SHACL.NODE_SHAPE)) {
+				type = SHACL.NODE_SHAPE;
+			} else if (type.equals(SHACL.PROPERTY_SHAPE)) {
+				type = SHACL.PROPERTY_SHAPE;
+			}
+		}
+
+		if (type == SHACL.PROPERTY_SHAPE) {
+			return connection.hasStatement(subject, SHACL.PATH, null, true, context);
+		} else if (type == SHACL.NODE_SHAPE) {
+			if (connection.hasStatement(subject, SHACL.PATH, null, true, context)) {
+				return false;
+			}
+			if (connection.hasStatement(null, SHACL.NODE, subject, true, context)) {
+				return true;
+			}
+			try (Stream<? extends Statement> stream = connection.getStatements(subject, null, null, true, context)
+					.stream()) {
+				return stream
+						.map(Statement::getPredicate)
+						.map(Value::stringValue)
+						.anyMatch(predicate -> predicate.startsWith(SHACL.NAMESPACE)
+								|| predicate.startsWith(DASH.NAMESPACE));
+			}
+		} else {
+			return false;
+		}
 	}
 
 	@Override

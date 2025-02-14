@@ -1,14 +1,17 @@
 /*******************************************************************************
  * Copyright (c) 2019 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.helpers;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 
@@ -27,7 +30,6 @@ import org.junit.jupiter.api.Test;
  * Unit tests for {@link AbstractSail}.
  *
  * @author Jeen Broekstra
- *
  */
 public class AbstractSailTest {
 
@@ -36,7 +38,7 @@ public class AbstractSailTest {
 	private final Random random = new Random(43252333);
 
 	@BeforeEach
-	public void setUp() throws Exception {
+	public void setUp() {
 
 		subject = new AbstractSail() {
 
@@ -110,7 +112,7 @@ public class AbstractSailTest {
 	class SailGetConnectionTask implements Runnable {
 
 		private final AbstractSail sail;
-		private CountDownLatch connectionObtained;
+		private final CountDownLatch connectionObtained;
 
 		public SailGetConnectionTask(AbstractSail sail, CountDownLatch connectionObtained) {
 			this.sail = sail;

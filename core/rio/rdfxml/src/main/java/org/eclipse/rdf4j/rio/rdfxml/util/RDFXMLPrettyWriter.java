@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.rio.rdfxml.util;
 
@@ -15,8 +18,10 @@ import java.io.Writer;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Stack;
+import java.util.regex.Pattern;
 
 import org.eclipse.rdf4j.common.net.ParsedIRI;
+import org.eclipse.rdf4j.common.xml.XMLUtil;
 import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -66,7 +71,7 @@ import org.eclipse.rdf4j.rio.rdfxml.RDFXMLWriter;
  *    &lt;/rdf:li&gt;
  * &lt;/rdf:Seq&gt;
  * </pre>
- *
+ * <p>
  * Typed node elements means that we write out type information in the short form of
  *
  * <pre>
@@ -74,7 +79,7 @@ import org.eclipse.rdf4j.rio.rdfxml.RDFXMLWriter;
  *     ...
  *  &lt;/foaf:Person&gt;
  * </pre>
- *
+ * <p>
  * instead of
  *
  * <pre>
@@ -83,7 +88,7 @@ import org.eclipse.rdf4j.rio.rdfxml.RDFXMLWriter;
  *     ...
  *  &lt;/rdf:Description&gt;
  * </pre>
- *
+ * <p>
  * Empty property elements are of the form
  *
  * <pre>
@@ -91,7 +96,7 @@ import org.eclipse.rdf4j.rio.rdfxml.RDFXMLWriter;
  *    &lt;foaf:homepage rdf:resource=&quot;http://www.cs.vu.nl/&tilde;marta&quot;/&gt;
  * &lt;/foaf:Person&gt;
  * </pre>
- *
+ * <p>
  * instead of
  *
  * <pre>
@@ -257,8 +262,9 @@ public class RDFXMLPrettyWriter extends RDFXMLWriter implements Closeable, Flush
 					writeIndents(i * 2 - 1);
 
 					IRI predicate = predicateStack.get(i - 1);
+					var predicateQName = new QName(predicate);
 
-					writeStartTag(predicate.getNamespace(), predicate.getLocalName());
+					writeStartTag(predicateQName.getNamespace(), predicateQName.getLocalName());
 					writeNewLine();
 				}
 
@@ -278,6 +284,7 @@ public class RDFXMLPrettyWriter extends RDFXMLWriter implements Closeable, Flush
 			writeNewLine();
 		} else {
 			IRI topPredicate = predicateStack.pop();
+			var topPredicateQName = new QName(topPredicate);
 
 			if (!topNode.hasType()) {
 				// we can use an abbreviated predicate
@@ -288,7 +295,7 @@ public class RDFXMLPrettyWriter extends RDFXMLWriter implements Closeable, Flush
 				// written out as well
 
 				writeIndents(nodeStack.size() * 2 - 1);
-				writeStartTag(topPredicate.getNamespace(), topPredicate.getLocalName());
+				writeStartTag(topPredicateQName.getNamespace(), topPredicateQName.getLocalName());
 				writeNewLine();
 
 				// write out an empty subject
@@ -297,7 +304,7 @@ public class RDFXMLPrettyWriter extends RDFXMLWriter implements Closeable, Flush
 				writeNewLine();
 
 				writeIndents(nodeStack.size() * 2 - 1);
-				writeEndTag(topPredicate.getNamespace(), topPredicate.getLocalName());
+				writeEndTag(topPredicateQName.getNamespace(), topPredicateQName.getLocalName());
 				writeNewLine();
 			}
 		}
@@ -317,12 +324,13 @@ public class RDFXMLPrettyWriter extends RDFXMLWriter implements Closeable, Flush
 
 				writeNodeEndTag(nextElement);
 
-				if (predicateStack.size() > 0) {
+				if (!predicateStack.isEmpty()) {
 					IRI nextPredicate = predicateStack.pop();
+					var nextPredicateQName = new QName(nextPredicate);
 
 					writeIndents(predicateStack.size() + nodeStack.size());
 
-					writeEndTag(nextPredicate.getNamespace(), nextPredicate.getLocalName());
+					writeEndTag(nextPredicateQName.getNamespace(), nextPredicateQName.getLocalName());
 
 					writeNewLine();
 				}
@@ -389,7 +397,8 @@ public class RDFXMLPrettyWriter extends RDFXMLWriter implements Closeable, Flush
 
 		if (node.hasType()) {
 			// We can use abbreviated syntax
-			writeStartOfStartTag(node.getType().getNamespace(), node.getType().getLocalName());
+			var nodeTypeQName = new QName(node.getType());
+			writeStartOfStartTag(nodeTypeQName.getNamespace(), nodeTypeQName.getLocalName());
 		} else {
 			// We cannot use abbreviated syntax
 			writeStartOfStartTag(RDF.NAMESPACE, "Description");
@@ -420,7 +429,8 @@ public class RDFXMLPrettyWriter extends RDFXMLWriter implements Closeable, Flush
 	 */
 	private void writeNodeEndTag(Node node) throws IOException {
 		if (node.getType() != null) {
-			writeEndTag(node.getType().getNamespace(), node.getType().getLocalName());
+			var nodeTypeQName = new QName(node.getType());
+			writeEndTag(nodeTypeQName.getNamespace(), nodeTypeQName.getLocalName());
 		} else {
 			writeEndTag(RDF.NAMESPACE, "Description");
 		}
@@ -439,7 +449,8 @@ public class RDFXMLPrettyWriter extends RDFXMLWriter implements Closeable, Flush
 	 * Write out an empty property element.
 	 */
 	private void writeAbbreviatedPredicate(IRI pred, Value obj) throws IOException, RDFHandlerException {
-		writeStartOfStartTag(pred.getNamespace(), pred.getLocalName());
+		var predQName = new QName(pred);
+		writeStartOfStartTag(predQName.getNamespace(), predQName.getLocalName());
 
 		if (obj instanceof Resource) {
 			Resource objRes = (Resource) obj;
@@ -481,7 +492,7 @@ public class RDFXMLPrettyWriter extends RDFXMLWriter implements Closeable, Flush
 				writeCharacterData(objLit.getLabel());
 			}
 
-			writeEndTag(pred.getNamespace(), pred.getLocalName());
+			writeEndTag(predQName.getNamespace(), predQName.getLocalName());
 		}
 
 		writeNewLine();
@@ -511,7 +522,7 @@ public class RDFXMLPrettyWriter extends RDFXMLWriter implements Closeable, Flush
 
 		private Resource nextLi;
 
-		private Value value;
+		private final Value value;
 
 		// type == null means that we use <rdf:Description>
 		private IRI type = null;
@@ -560,6 +571,33 @@ public class RDFXMLPrettyWriter extends RDFXMLWriter implements Closeable, Flush
 
 		public boolean isWritten() {
 			return isWritten;
+		}
+	}
+
+	private static class QName {
+		private static final Pattern VALID_XML_ELEMENT_NAME = Pattern.compile("[a-zA-Z_][a-zA-Z0-9_\\-\\.]*");
+
+		private final String namespace;
+		private final String localName;
+
+		public QName(IRI resource) {
+			if (!VALID_XML_ELEMENT_NAME.matcher(resource.getLocalName()).matches()) {
+				var iriString = resource.getNamespace() + resource.getLocalName();
+				var sep = XMLUtil.findURISplitIndex(iriString);
+				namespace = iriString.substring(0, sep);
+				localName = iriString.substring(sep);
+			} else {
+				localName = resource.getLocalName();
+				namespace = resource.getNamespace();
+			}
+		}
+
+		public String getLocalName() {
+			return localName;
+		}
+
+		public String getNamespace() {
+			return namespace;
 		}
 	}
 }

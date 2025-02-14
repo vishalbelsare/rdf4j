@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2021 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.lmdb;
 
@@ -14,8 +17,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import org.apache.commons.io.FileUtils;
+import org.eclipse.rdf4j.collection.factory.api.CollectionFactory;
+import org.eclipse.rdf4j.collection.factory.mapdb.MapDb3CollectionFactory;
 import org.eclipse.rdf4j.common.annotation.Experimental;
 import org.eclipse.rdf4j.common.concurrent.locks.Lock;
 import org.eclipse.rdf4j.common.concurrent.locks.LockManager;
@@ -60,7 +67,7 @@ public class LmdbStore extends AbstractNotifyingSail implements FederatedService
 	/**
 	 * Specifies which triple indexes this lmdb store must use.
 	 */
-	private LmdbStoreConfig config;
+	private final LmdbStoreConfig config;
 
 	private SailStore store;
 
@@ -79,10 +86,14 @@ public class LmdbStore extends AbstractNotifyingSail implements FederatedService
 
 	private EvaluationStrategyFactory evalStratFactory;
 
-	/** independent life cycle */
+	/**
+	 * independent life cycle
+	 */
 	private FederatedServiceResolver serviceResolver;
 
-	/** dependent life cycle */
+	/**
+	 * dependent life cycle
+	 */
 	private SPARQLServiceResolver dependentServiceResolver;
 
 	/**
@@ -120,6 +131,7 @@ public class LmdbStore extends AbstractNotifyingSail implements FederatedService
 		setSupportedIsolationLevels(IsolationLevels.NONE, IsolationLevels.READ_COMMITTED, IsolationLevels.SNAPSHOT_READ,
 				IsolationLevels.SNAPSHOT, IsolationLevels.SERIALIZABLE);
 		setDefaultIsolationLevel(IsolationLevels.SNAPSHOT_READ);
+		config.getDefaultQueryEvaluationMode().ifPresent(this::setDefaultQueryEvaluationMode);
 		EvaluationStrategyFactory evalStrategyFactory = config.getEvaluationStrategyFactory();
 		if (evalStrategyFactory != null) {
 			setEvaluationStrategyFactory(evalStrategyFactory);
@@ -157,6 +169,7 @@ public class LmdbStore extends AbstractNotifyingSail implements FederatedService
 		}
 		evalStratFactory.setQuerySolutionCacheThreshold(getIterationCacheSyncThreshold());
 		evalStratFactory.setTrackResultSize(isTrackResultSize());
+		evalStratFactory.setCollectionFactory(getCollectionFactory());
 		return evalStratFactory;
 	}
 
@@ -197,7 +210,7 @@ public class LmdbStore extends AbstractNotifyingSail implements FederatedService
 	/**
 	 * Initializes this LmdbStore.
 	 *
-	 * @exception SailException If this LmdbStore could not be initialized using the parameters that have been set.
+	 * @throws SailException If this LmdbStore could not be initialized using the parameters that have been set.
 	 */
 	@Override
 	protected void initializeInternal() throws SailException {
@@ -238,11 +251,13 @@ public class LmdbStore extends AbstractNotifyingSail implements FederatedService
 				FileUtils.writeStringToFile(versionFile, VERSION, StandardCharsets.UTF_8);
 			}
 			backingStore = new LmdbSailStore(dataDir, config);
-			this.store = new SnapshotSailStore(backingStore, () -> new MemoryOverflowModel() {
+			this.store = new SnapshotSailStore(backingStore, () -> new MemoryOverflowModel(false) {
 				@Override
-				protected SailStore createSailStore(File dataDir) throws IOException, SailException {
+				protected LmdbSailStore createSailStore(File dataDir) throws IOException, SailException {
 					// Model can't fit into memory, use another LmdbSailStore to store delta
-					return new LmdbSailStore(dataDir, config);
+					LmdbSailStore lmdbSailStore = new LmdbSailStore(dataDir, config);
+					lmdbSailStore.enableMultiThreading = false;
+					return lmdbSailStore;
 				}
 			}) {
 
@@ -295,10 +310,13 @@ public class LmdbStore extends AbstractNotifyingSail implements FederatedService
 			File dataDir = getDataDir();
 			if (dataDir != null) {
 				try {
-					Files.walk(dataDir.toPath())
-							.map(Path::toFile)
-							.sorted(Comparator.reverseOrder()) // delete files before directory
-							.forEach(File::delete);
+					try (Stream<Path> walk = Files.walk(dataDir.toPath())) {
+						walk
+								.map(Path::toFile)
+								.sorted(Comparator.reverseOrder()) // delete files before directory
+								.forEach(File::delete);
+					}
+
 				} catch (IOException ioe) {
 					logger.error("Could not delete temp file " + dataDir);
 				}
@@ -323,11 +341,7 @@ public class LmdbStore extends AbstractNotifyingSail implements FederatedService
 
 	@Override
 	protected NotifyingSailConnection getConnectionInternal() throws SailException {
-		try {
-			return new LmdbStoreConnection(this);
-		} catch (IOException e) {
-			throw new SailException(e);
-		}
+		return new LmdbStoreConnection(this);
 	}
 
 	@Override
@@ -385,8 +399,14 @@ public class LmdbStore extends AbstractNotifyingSail implements FederatedService
 		return backingStore;
 	}
 
-	private boolean upgradeStore(File dataDir, String version) throws IOException, SailException {
+	private boolean upgradeStore(File dataDir, String version) throws SailException {
 		// nothing to do, just update version number
 		return true;
 	}
+
+	@Override
+	public Supplier<CollectionFactory> getCollectionFactory() {
+		return () -> new MapDb3CollectionFactory(getIterationCacheSyncThreshold());
+	}
+
 }

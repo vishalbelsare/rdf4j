@@ -1,9 +1,12 @@
 /*******************************************************************************
- * .Copyright (c) 2020 Eclipse RDF4J contributors.
+ * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.shacl.ast.planNodes;
 
@@ -34,8 +37,8 @@ public class BufferedPlanNode<T extends MultiStreamPlanNode & PlanNode> implemen
 	}
 
 	@Override
-	public CloseableIteration<? extends ValidationTuple, SailException> iterator() {
-		return new CloseableIteration<ValidationTuple, SailException>() {
+	public CloseableIteration<? extends ValidationTuple> iterator() {
+		return new CloseableIteration<>() {
 
 			{
 				parent.init();
@@ -49,12 +52,15 @@ public class BufferedPlanNode<T extends MultiStreamPlanNode & PlanNode> implemen
 
 			@Override
 			public boolean hasNext() throws SailException {
+				if (closed) {
+					return false;
+				}
 				calculateNext();
 				return !buffer.isEmpty();
 			}
 
 			private void calculateNext() {
-
+				assert !closed;
 				while (buffer.isEmpty()) {
 					boolean success = parent.incrementIterator();
 					if (!success) {
@@ -72,8 +78,8 @@ public class BufferedPlanNode<T extends MultiStreamPlanNode & PlanNode> implemen
 				ValidationTuple tuple = buffer.remove();
 				if (validationExecutionLogger.isEnabled()) {
 					validationExecutionLogger.log(depth(),
-							parent.getClass().getSimpleName() + ":Buffered:" + name + ".next()", tuple, parent,
-							getId(), null);
+							parent.getClass().getSimpleName() + ":Buffered:" + name + ".next()", tuple, parent, getId(),
+							null);
 				}
 				return tuple;
 			}

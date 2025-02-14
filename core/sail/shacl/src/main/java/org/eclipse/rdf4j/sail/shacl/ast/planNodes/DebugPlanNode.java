@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2020 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.sail.shacl.ast.planNodes;
 
@@ -16,6 +19,7 @@ import org.eclipse.rdf4j.sail.SailException;
 /**
  * Used for adding a custom log statement to tuples as they pass through. Should only be used for debugging.
  */
+@SuppressWarnings("unused")
 public class DebugPlanNode implements PlanNode {
 
 	private StackTraceElement[] stackTrace;
@@ -33,7 +37,7 @@ public class DebugPlanNode implements PlanNode {
 	public DebugPlanNode(PlanNode parent, String message) {
 		this.parent = parent;
 		this.message = message;
-		// this.stackTrace = Thread.currentThread().getStackTrace();
+		this.stackTrace = Thread.currentThread().getStackTrace();
 
 	}
 
@@ -43,15 +47,15 @@ public class DebugPlanNode implements PlanNode {
 	}
 
 	@Override
-	public CloseableIteration<? extends ValidationTuple, SailException> iterator() {
+	public CloseableIteration<? extends ValidationTuple> iterator() {
 
 		if (validationExecutionLogger == null && validationExecutionLogger.isEnabled()) {
 			throw new IllegalStateException("Did not receive validationExecutionLogger before .iterator() was called!");
 		}
 
-		return new CloseableIteration<ValidationTuple, SailException>() {
+		return new CloseableIteration<>() {
 
-			final CloseableIteration<? extends ValidationTuple, SailException> iterator = parent.iterator();
+			final CloseableIteration<? extends ValidationTuple> iterator = parent.iterator();
 
 			@Override
 			public boolean hasNext() throws SailException {

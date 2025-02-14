@@ -1,9 +1,12 @@
 /*******************************************************************************
  * Copyright (c) 2018 Eclipse RDF4J contributors.
+ *
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 
 package org.eclipse.rdf4j.sail.shacl;
@@ -45,20 +48,6 @@ public class Utils {
 			assert shapesData != null : "Could not find: " + resourceName;
 			shapes = Rio.parse(shapesData, "", RDFFormat.TRIG);
 		}
-		try (SailConnection conn = sail.getConnection()) {
-			conn.begin(IsolationLevels.NONE);
-			for (Statement st : shapes) {
-				conn.addStatement(st.getSubject(), st.getPredicate(), st.getObject(), st.getContext());
-			}
-			conn.commit();
-		}
-		sail.enableValidation();
-
-	}
-
-	public static void loadShapeData(ShaclSail sail, Model shapes) throws IOException {
-		sail.init();
-		sail.disableValidation();
 		try (SailConnection conn = sail.getConnection()) {
 			conn.begin(IsolationLevels.NONE);
 			for (Statement st : shapes) {
@@ -128,17 +117,6 @@ public class Utils {
 		return sail;
 	}
 
-	public static SailRepository getInitializedShaclRepository(URL resourceName) {
-		assert resourceName.toString().endsWith(".trig") : "Not a RDF Trig file: " + resourceName;
-		SailRepository repo = new SailRepository(new ShaclSail(new MemoryStore()));
-		try {
-			Utils.loadShapeData(repo, resourceName);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-		return repo;
-	}
-
 	public static SailRepository getSailRepository(URL resourceName, RDFFormat format) {
 		SailRepository sailRepository = new SailRepository(new MemoryStore());
 		try (SailRepositoryConnection connection = sailRepository.getConnection()) {
@@ -159,7 +137,7 @@ public class Utils {
 
 			try (RepositoryConnection conn = repo.getConnection()) {
 				conn.begin(IsolationLevels.NONE, ShaclSail.TransactionSettings.ValidationApproach.Disabled);
-				conn.add(initialData, "", RDFFormat.TURTLE);
+				conn.add(initialData, "", RDFFormat.TRIG);
 				conn.commit();
 			}
 		}
